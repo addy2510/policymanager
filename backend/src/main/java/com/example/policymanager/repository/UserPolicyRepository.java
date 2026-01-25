@@ -20,4 +20,8 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyDetails, L
 
     // Maturity list (example)
     List<UserPolicyDetails> findByMaturityDateBefore(java.time.LocalDate date);
+
+    List<UserPolicyDetails> findByMaturityDateBetween(java.time.LocalDate start, java.time.LocalDate end);
+
+    List<UserPolicyDetails> findByMaturityDateAfter(java.time.LocalDate date);
 }
