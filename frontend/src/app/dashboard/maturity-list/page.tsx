@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, ChevronDown, X, Home, FileText, BarChart3, Calendar, Settings, LogOut } from 'lucide-react';
+import { apiCall } from '../../utils/api';
 
 interface MaturityPolicy {
   id: number;
@@ -19,24 +20,11 @@ export default function MaturityList() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [userName, setUserName] = useState('Admin');
   const [selectedDate, setSelectedDate] = useState('2026-01-16');
+  const [maturityFromDate, setMaturityFromDate] = useState('2026-01-01');
+  const [maturityToDate, setMaturityToDate] = useState('2026-01-31');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [allMaturityPolicies] = useState<MaturityPolicy[]>([
-    { id: 1, policyNo: 'CC123456', customerName: 'John Doe', policyType: 'Endowment Plan', maturityDate: '16-Jan-2026', amount: 500000, status: 'Pending' },
-    { id: 2, policyNo: 'AN654321', customerName: 'Anita Nair', policyType: 'Money Back Plan', maturityDate: '16-Jan-2026', amount: 700000, status: 'Pending' },
-    { id: 3, policyNo: 'DH789012', customerName: 'Devendra Hegde', policyType: 'ULIP', maturityDate: '16-Jan-2026', amount: 600000, status: 'Pending' },
-    { id: 4, policyNo: 'BG345678', customerName: 'Bharat Gupta', policyType: 'Term Plan', maturityDate: '16-Jan-2026', amount: 400000, status: 'Pending' },
-    { id: 5, policyNo: 'RC876543', customerName: 'Ravi Chawla', policyType: 'Endowment Plan', maturityDate: '16-Jan-2026', amount: 550000, status: 'Pending' },
-    { id: 6, policyNo: 'JS567890', customerName: 'Jyoti Sharma', policyType: 'Money Back Plan', maturityDate: '16-Jan-2026', amount: 650000, status: 'Pending' },
-    { id: 7, policyNo: 'MS123789', customerName: 'Mahesh Singh', policyType: 'ULIP', maturityDate: '16-Jan-2026', amount: 500000, status: 'Pending' },
-    { id: 8, policyNo: 'VR678901', customerName: 'Vaishali Rao', policyType: 'Endowment Plan', maturityDate: '16-Jan-2026', amount: 700000, status: 'Pending' },
-    { id: 9, policyNo: 'LP234567', customerName: 'Lakshmi Patel', policyType: 'Money Back Plan', maturityDate: '16-Jan-2026', amount: 600000, status: 'Pending' },
-    { id: 10, policyNo: 'SS345678', customerName: 'Sumit Singh', policyType: 'Term Plan', maturityDate: '16-Jan-2026', amount: 450000, status: 'Pending' },
-    { id: 11, policyNo: 'RP456789', customerName: 'Priya Roy', policyType: 'Endowment Plan', maturityDate: '16-Jan-2026', amount: 550000, status: 'Pending' },
-    { id: 12, policyNo: 'SA567890', customerName: 'Arun Saha', policyType: 'Money Back Plan', maturityDate: '16-Jan-2026', amount: 600000, status: 'Pending' },
-  ]);
-
-  const [maturityPolicies, setMaturityPolicies] = useState<MaturityPolicy[]>(allMaturityPolicies);
+  const [maturityPolicies, setMaturityPolicies] = useState<MaturityPolicy[]>([]);
   const itemsPerPage = 10;
   const totalPages = Math.ceil(maturityPolicies.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -52,18 +40,59 @@ export default function MaturityList() {
     }
   }, [router]);
 
-  const handleFetchRecords = () => {
-    // This will be replaced with API call
-    // For now, filter by selected date
-    const filtered = allMaturityPolicies.filter(policy =>
-      policy.maturityDate === new Date(selectedDate).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      }).replace(/ /g, '-')
-    );
-    setMaturityPolicies(filtered.length > 0 ? filtered : allMaturityPolicies);
-    setCurrentPage(1);
+  const handleFetchRecords = async () => {
+    // Validate that at least one date is provided
+    if (!maturityFromDate && !maturityToDate) {
+      alert('Please provide at least one maturity date (From or To)');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        alert('Authentication token not found. Please login.');
+        return;
+      }
+
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (maturityFromDate) {
+        params.append('maturityFrom', maturityFromDate);
+      }
+      if (maturityToDate) {
+        params.append('maturityTo', maturityToDate);
+      }
+
+      // Call API endpoint
+      const response = await apiCall(`/api/v1/policy/maturity?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.content && Array.isArray(response.content)) {
+        // Map API response to MaturityPolicy interface
+        const mappedPolicies = response.content.map((policy: any) => ({
+          id: policy.id || Math.random(),
+          policyNo: policy.policyNumber || policy.policyNo || '',
+          customerName: policy.personName || policy.customerName || '',
+          policyType: policy.product || policy.policyType || '',
+          maturityDate: policy.maturityDate || '',
+          amount: policy.sumAssured || policy.amount || 0,
+          status: policy.status || 'Pending',
+          ...policy
+        }));
+        setMaturityPolicies(mappedPolicies);
+      } else {
+        alert('No policies found for the selected date range.');
+        setMaturityPolicies([]);
+      }
+      setCurrentPage(1);
+    } catch (error: any) {
+      console.error('Error fetching maturity records:', error);
+      alert(`Error fetching records: ${error.message}`);
+    }
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,7 +105,7 @@ export default function MaturityList() {
       );
       setMaturityPolicies(filtered);
     } else {
-      setMaturityPolicies(allMaturityPolicies);
+      setMaturityPolicies([]);
     }
     setCurrentPage(1);
   };
@@ -110,7 +139,22 @@ export default function MaturityList() {
   };
 
   const handlePrint = () => {
+    // Hide elements that should not be printed
+    const printHides = document.querySelectorAll('.print-hide, .sidebar-print-hide, .filters-print-hide, .buttons-print-hide, .pagination-print-hide');
+    const originalDisplay: { element: Element; display: string }[] = [];
+    
+    printHides.forEach((element) => {
+      originalDisplay.push({ element, display: (element as HTMLElement).style.display });
+      (element as HTMLElement).style.display = 'none';
+    });
+    
+    // Trigger print
     window.print();
+    
+    // Restore hidden elements
+    originalDisplay.forEach(({ element, display }) => {
+      (element as HTMLElement).style.display = display;
+    });
   };
 
   const handleLogout = () => {
@@ -123,7 +167,7 @@ export default function MaturityList() {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-48' : 'w-20'} bg-slate-700 text-white transition-all duration-300 flex flex-col`}>
+      <div className={`sidebar-print-hide ${sidebarOpen ? 'w-48' : 'w-20'} bg-slate-700 text-white transition-all duration-300 flex flex-col`}>
         {/* Logo */}
         <div className="flex items-center gap-3 p-4 border-b border-slate-600">
           <div className="bg-blue-500 p-2 rounded">
@@ -188,17 +232,26 @@ export default function MaturityList() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-auto p-8">
-          <p className="text-gray-600 mb-6">View and download policies maturing on a selected date</p>
+          <p className="text-gray-600 mb-6 print-hide">View and download policies maturing on a selected date</p>
 
           {/* Date and Action Buttons */}
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="buttons-print-hide bg-white rounded-lg shadow p-6 mb-6">
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-2">
-                <label className="font-semibold text-gray-700">Maturity Date:</label>
+                <label className="font-semibold text-gray-700">Maturity From:</label>
                 <input
                   type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  value={maturityFromDate}
+                  onChange={(e) => setMaturityFromDate(e.target.value)}
+                  className="border border-gray-300 rounded px-3 py-2 text-gray-800"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="font-semibold text-gray-700">Maturity To:</label>
+                <input
+                  type="date"
+                  value={maturityToDate}
+                  onChange={(e) => setMaturityToDate(e.target.value)}
                   className="border border-gray-300 rounded px-3 py-2 text-gray-800"
                 />
               </div>
@@ -240,24 +293,6 @@ export default function MaturityList() {
             </div>
           </div>
 
-          {/* Search and Filters */}
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <div className="flex items-center gap-4 mb-4">
-              <span className="text-gray-700 font-semibold">Filters {maturityPolicies.length}</span>
-              <ChevronDown size={20} className="text-gray-600" />
-            </div>
-            <div className="flex items-center gap-4">
-              <label className="text-gray-700 font-semibold">Search:</label>
-              <input
-                type="text"
-                placeholder="Search by Policy No or Customer Name..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="border border-gray-300 rounded px-4 py-2 flex-1 text-gray-800 placeholder-gray-600"
-              />
-            </div>
-          </div>
-
           {/* Table */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <table className="w-full">
@@ -292,7 +327,7 @@ export default function MaturityList() {
             </table>
 
             {/* Pagination */}
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="pagination-print-hide px-6 py-4 border-t border-gray-200 flex items-center justify-between">
               <span className="text-gray-600">Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, maturityPolicies.length)} of {maturityPolicies.length} entries</span>
               <div className="flex items-center gap-2">
                 <button

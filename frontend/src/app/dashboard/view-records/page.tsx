@@ -24,7 +24,7 @@ interface PolicyRecord {
   policyType?: string;
   startDate?: string;
   maturityDate?: string;
-  status?: "Active" | "Matured" | "Lapsed" | string;
+  status?: string;
   fup?: string;
   premium?: number;
   term?: string;
@@ -41,7 +41,7 @@ interface PolicyRecord {
 export default function ViewRecords() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [allRecords] = useState<PolicyRecord[]>([]);
+  const [allRecords, setAllRecords] = useState<PolicyRecord[]>([]);
 
   const [records, setRecords] = useState<PolicyRecord[]>([]);
   const [filterPolicyNo, setFilterPolicyNo] = useState("");
@@ -53,6 +53,64 @@ export default function ViewRecords() {
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyRecord | null>(null);
   const [showModal, setShowModal] = useState(false);
+
+  // Fetch all records on component mount
+  useEffect(() => {
+    const fetchAllRecords = async () => {
+      setLoading(true);
+      setError("");
+      const params = new URLSearchParams();
+
+      params.append("page", "0");
+      params.append("size", "2000");
+
+      try {
+        const queryString = params.toString();
+        const result = await apiCall("/api/v1/policy/all?" + queryString, {
+          method: "GET"
+        });
+
+        console.log("Fetched all records:", result);
+
+        // Map API response to PolicyRecord interface
+        const mappedRecords = (result.content || result || []).map((record: any) => ({
+          id: record.id || `${record.policyNumber}`,
+          policyNo: record.policyNumber || record.policyNo || "",
+          policyNumber: record.policyNumber,
+          customerName: record.personName || record.customerName || "",
+          personName: record.personName,
+          groupCode: record.groupCode || "",
+          policyType: record.policyType || "",
+          startDate: record.startDate || "",
+          maturityDate: record.maturityDate || "",
+          status: record.status || "",
+          fup: record.fup || "",
+          premium: record.premium || 0,
+          term: record.term || "",
+          address: record.address || "",
+          mode: record.mode || "",
+          product: record.product || "",
+          commencementDate: record.commencementDate || "",
+          sumAssured: record.sumAssured || 0,
+          groupHead: record.groupHead || "",
+          dob: record.dob || "",
+          ...record,
+        }));
+
+        setAllRecords(mappedRecords);
+        setRecords(mappedRecords);
+      } catch (err) {
+        console.error("Error fetching all records:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch records"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllRecords();
+  }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -164,12 +222,58 @@ export default function ViewRecords() {
     }
   };
 
-  const handleClearFilters = () => {
+  const handleClearFilters = async () => {
     setFilterPolicyNo("");
     setFilterGroupCode("");
     setFilterCustomerName("");
-    setRecords(allRecords);
-    setCurrentPage(1);
+    setLoading(true);
+    setError("");
+
+    try {
+      const params = new URLSearchParams();
+      params.append("page", "0");
+      params.append("size", "2000");
+
+      const queryString = params.toString();
+      const result = await apiCall("/api/v1/policy/all?" + queryString, {
+        method: "GET"
+      });
+
+      const mappedRecords = (result.content || result || []).map((record: any) => ({
+        id: record.id || `${record.policyNumber}`,
+        policyNo: record.policyNumber || record.policyNo || "",
+        policyNumber: record.policyNumber,
+        customerName: record.personName || record.customerName || "",
+        personName: record.personName,
+        groupCode: record.groupCode || "",
+        policyType: record.policyType || "",
+        startDate: record.startDate || "",
+        maturityDate: record.maturityDate || "",
+        status: record.status || "",
+        fup: record.fup || "",
+        premium: record.premium || 0,
+        term: record.term || "",
+        address: record.address || "",
+        mode: record.mode || "",
+        product: record.product || "",
+        commencementDate: record.commencementDate || "",
+        sumAssured: record.sumAssured || 0,
+        groupHead: record.groupHead || "",
+        dob: record.dob || "",
+        ...record,
+      }));
+
+      setAllRecords(mappedRecords);
+      setRecords(mappedRecords);
+      setCurrentPage(1);
+    } catch (err) {
+      console.error("Error fetching all records:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch records"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -504,19 +608,30 @@ export default function ViewRecords() {
                 >
                   Previous
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <button
-                    key={i + 1}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className={`px-3 py-1 rounded font-semibold ${
-                      currentPage === i + 1
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(
+                    (page) =>
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                  )
+                  .map((page, idx, arr) => (
+                    <React.Fragment key={page}>
+                      {idx > 0 && arr[idx - 1] !== page - 1 && (
+                        <span className="px-2 py-1 text-gray-600">...</span>
+                      )}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 rounded font-semibold ${
+                          currentPage === page
+                            ? "bg-blue-600 text-white"
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  ))}
                 <button
                   onClick={() =>
                     setCurrentPage(Math.min(totalPages, currentPage + 1))
