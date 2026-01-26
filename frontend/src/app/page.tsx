@@ -9,13 +9,46 @@ export default function Home() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Store user info in localStorage for the session
-    localStorage.setItem('user', JSON.stringify({ username, rememberMe }));
-    // Redirect to dashboard
-    router.push('/dashboard');
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8081/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          username,
+          password,
+        }),
+      });
+
+      console.log('Login Response:', response);
+
+      if (!response.ok) {
+        throw new Error('Invalid credentials');
+      }
+
+      const data = await response.json();
+      console.log('Login Data:', data);
+      
+      // Store token and user info in localStorage
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('user', JSON.stringify({ username, rememberMe }));
+      
+      // Redirect to dashboard
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -56,6 +89,13 @@ export default function Home() {
         {/* Login Form Card */}
         <div className="bg-blue-300/60 backdrop-blur-md rounded-3xl p-8 shadow-2xl">
           <form onSubmit={handleLogin} className="space-y-4">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-500/80 text-white p-3 rounded-lg text-sm font-medium">
+                {error}
+              </div>
+            )}
+
             {/* Username Input */}
             <div className="relative">
               <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-600">
@@ -101,9 +141,10 @@ export default function Home() {
             {/* Login Button */}
             <button
               type="submit"
-              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-4 rounded-xl transition transform hover:scale-105 mt-6"
+              disabled={loading}
+              className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl transition transform hover:scale-105 mt-6 disabled:scale-100"
             >
-              Login
+              {loading ? 'Logging in...' : 'Login'}
             </button>
 
             {/* Forgot Password Link */}

@@ -34,7 +34,7 @@ public class PolicyController {
     public Page<PolicyResponse> getMaturityList(
             @RequestParam(required = false) java.time.LocalDate maturityFrom,
             @RequestParam(required = false) java.time.LocalDate maturityTo,
-            @PageableDefault(size = 10) Pageable pageable) {
+            @PageableDefault(size = 5) Pageable pageable) {
         return policyService.getMaturityPolicies(maturityFrom, maturityTo, pageable);
     }
 
@@ -43,7 +43,7 @@ public class PolicyController {
             @RequestParam(required = false) String policyNumber,
             @RequestParam(required = false) String personName,
             @RequestParam(required = false) String groupCode,
-            @PageableDefault(size = 10) Pageable pageable) {
+            @PageableDefault(size = 5) Pageable pageable) {
         return policyService.searchPolicy(policyNumber, personName, groupCode, pageable);
     }
 
