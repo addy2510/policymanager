@@ -27,4 +27,6 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyDetails, L
             Pageable pageable);
 
     Page<UserPolicyDetails> findByMaturityDateAfter(java.time.LocalDate date, Pageable pageable);
+
+    long countByMaturityDateBefore(java.time.LocalDate date);
 }

@@ -2,6 +2,7 @@ package com.example.policymanager.controller;
 
 import com.example.policymanager.beans.PolicyRequest;
 import com.example.policymanager.beans.PolicyResponse;
+import com.example.policymanager.beans.PolicyStatsResponse;
 import com.example.policymanager.service.PolicyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -44,5 +45,10 @@ public class PolicyController {
             @RequestParam(required = false) String groupCode,
             @PageableDefault(size = 10) Pageable pageable) {
         return policyService.searchPolicy(policyNumber, personName, groupCode, pageable);
+    }
+
+    @GetMapping("/stats")
+    public PolicyStatsResponse getPolicyStats() {
+        return policyService.getPolicyStats();
     }
 }

@@ -2,6 +2,7 @@ package com.example.policymanager.service;
 
 import com.example.policymanager.beans.PolicyRequest;
 import com.example.policymanager.beans.PolicyResponse;
+import com.example.policymanager.beans.PolicyStatsResponse;
 import com.example.policymanager.repository.UserPolicyRepository;
 import com.example.policymanager.tables.UserPolicyDetails;
 import org.springframework.data.domain.Page;
@@ -142,6 +143,16 @@ public class PolicyService {
         }
 
         return Page.empty(pageable);
+    }
+
+    /**
+     * Get Policy Stats
+     */
+    public PolicyStatsResponse getPolicyStats() {
+        long total = policyRepository.count();
+        long matured = policyRepository.countByMaturityDateBefore(LocalDate.now());
+        long active = total - matured;
+        return new PolicyStatsResponse(total, matured, active);
     }
 
     // -------------------- UTILS --------------------
