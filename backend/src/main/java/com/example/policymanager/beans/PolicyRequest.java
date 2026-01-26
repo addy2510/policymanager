@@ -25,5 +25,6 @@ public class PolicyRequest {
     private String product;
     private LocalDate commencementDate;
     private BigDecimal sumAssured;
+    private String groupHead;
 
 }

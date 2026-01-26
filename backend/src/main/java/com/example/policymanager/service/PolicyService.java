@@ -5,6 +5,7 @@ import com.example.policymanager.beans.PolicyResponse;
 import com.example.policymanager.beans.PolicyStatsResponse;
 import com.example.policymanager.repository.UserPolicyRepository;
 import com.example.policymanager.tables.UserPolicyDetails;
+import com.example.status.PolicyStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -206,6 +207,21 @@ public class PolicyService {
         response.setFup(entity.getFup());
         response.setMaturityDate(entity.getMaturityDate());
         response.setPremium(entity.getPremium());
+        response.setTerm(entity.getTerm());
+        response.setDob(entity.getDob());
+        response.setAddress(entity.getAddress());
+        response.setMode(entity.getMode());
+        response.setProduct(entity.getProduct());
+        response.setCommencementDate(entity.getCommencementDate());
+        response.setSumAssured(entity.getSumAssured());
+        response.setGroupHead(entity.getGroupHead());
+
+        // Set status based on maturity date
+        if (entity.getMaturityDate().isAfter(LocalDate.now())) {
+            response.setStatus(PolicyStatus.ACTIVE);
+        } else {
+            response.setStatus(PolicyStatus.MATURED);
+        }
 
         return response;
     }
