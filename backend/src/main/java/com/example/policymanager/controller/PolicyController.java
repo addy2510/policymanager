@@ -4,6 +4,9 @@ import com.example.policymanager.beans.PolicyRequest;
 import com.example.policymanager.beans.PolicyResponse;
 import com.example.policymanager.service.PolicyService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,17 +32,19 @@ public class PolicyController {
     }
 
     @GetMapping("/maturity")
-    public List<PolicyResponse> getMaturityList(
+    public Page<PolicyResponse> getMaturityList(
             @RequestParam(required = false) java.time.LocalDate maturityFrom,
-            @RequestParam(required = false) java.time.LocalDate maturityTo) {
-        return policyService.getMaturityPolicies(maturityFrom, maturityTo);
+            @RequestParam(required = false) java.time.LocalDate maturityTo,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return policyService.getMaturityPolicies(maturityFrom, maturityTo, pageable);
     }
 
     @GetMapping("/search")
-    public List<PolicyResponse> searchPolicy(
+    public Page<PolicyResponse> searchPolicy(
             @RequestParam(required = false) String policyNumber,
             @RequestParam(required = false) String personName,
-            @RequestParam(required = false) String groupCode) {
-        return policyService.searchPolicy(policyNumber, personName, groupCode);
+            @RequestParam(required = false) String groupCode,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return policyService.searchPolicy(policyNumber, personName, groupCode, pageable);
     }
 }

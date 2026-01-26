@@ -4,8 +4,11 @@ import com.example.policymanager.beans.PolicyRequest;
 import com.example.policymanager.beans.PolicyResponse;
 import com.example.policymanager.repository.UserPolicyRepository;
 import com.example.policymanager.tables.UserPolicyDetails;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -90,62 +93,56 @@ public class PolicyService {
     /**
      * Get Maturity List
      */
-    public List<PolicyResponse> getMaturityPolicies(LocalDate maturityFrom, LocalDate maturityTo) {
+    public Page<PolicyResponse> getMaturityPolicies(LocalDate maturityFrom, LocalDate maturityTo, Pageable pageable) {
 
-        List<UserPolicyDetails> policies;
+        Page<UserPolicyDetails> policies;
 
         if (maturityFrom == null) {
             if (maturityTo != null) {
-                policies = policyRepository.findByMaturityDateBefore(maturityTo);
+                policies = policyRepository.findByMaturityDateBefore(maturityTo, pageable);
             } else {
-                policies = List.of(); // or handle as needed
+                policies = Page.empty(pageable);
             }
         } else {
             if (maturityTo != null) {
-                policies = policyRepository.findByMaturityDateBetween(maturityFrom, maturityTo);
+                policies = policyRepository.findByMaturityDateBetween(maturityFrom, maturityTo, pageable);
             } else {
-                policies = policyRepository.findByMaturityDateAfter(maturityFrom); // assuming you want from now on, but
-                                                                                   // adjust
+                policies = policyRepository.findByMaturityDateAfter(maturityFrom, pageable);
             }
         }
 
-        return policies.stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return policies.map(this::mapToResponse);
     }
 
     /**
      * Search Policy
      */
-    public List<PolicyResponse> searchPolicy(String policyNumber,
+    public Page<PolicyResponse> searchPolicy(String policyNumber,
             String personName,
-            String groupCode) {
+            String groupCode, Pageable pageable) {
 
         if (policyNumber != null) {
             Optional<UserPolicyDetails> policy = policyRepository.findById(Long.valueOf(policyNumber));
 
-            return policy
+            List<PolicyResponse> content = policy
                     .map(p -> List.of(mapToResponse(p)))
                     .orElse(List.of());
+            return new PageImpl<>(content, pageable, content.size());
         }
 
         if (personName != null) {
-            return policyRepository
-                    .findByPolicyHolderContainingIgnoreCase(personName)
-                    .stream()
-                    .map(this::mapToResponse)
-                    .collect(Collectors.toList());
+            Page<UserPolicyDetails> page = policyRepository
+                    .findByPolicyHolderContainingIgnoreCase(personName, pageable);
+            return page.map(this::mapToResponse);
         }
 
         if (groupCode != null) {
-            return policyRepository
-                    .findByGroupCode(groupCode)
-                    .stream()
-                    .map(this::mapToResponse)
-                    .collect(Collectors.toList());
+            Page<UserPolicyDetails> page = policyRepository
+                    .findByGroupCode(groupCode, pageable);
+            return page.map(this::mapToResponse);
         }
 
-        return List.of();
+        return Page.empty(pageable);
     }
 
     // -------------------- UTILS --------------------
@@ -156,7 +153,7 @@ public class PolicyService {
         do {
             int num = 100000 + random.nextInt(900000); // Generates 100000 to 999999
             code = String.valueOf(num);
-        } while (!policyRepository.findByGroupCode(code).isEmpty());
+        } while (policyRepository.existsByGroupCode(code));
         return code;
     }
 
