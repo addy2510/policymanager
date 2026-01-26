@@ -146,6 +146,13 @@ public class PolicyService {
     }
 
     /**
+     * Get All Policies
+     */
+    public Page<PolicyResponse> getAllPolicies(Pageable pageable) {
+        return policyRepository.findAll(pageable).map(this::mapToResponse);
+    }
+
+    /**
      * Get Policy Stats
      */
     public PolicyStatsResponse getPolicyStats() {

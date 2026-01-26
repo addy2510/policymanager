@@ -47,6 +47,11 @@ public class PolicyController {
         return policyService.searchPolicy(policyNumber, personName, groupCode, pageable);
     }
 
+    @GetMapping("/all")
+    public Page<PolicyResponse> getAllPolicies(@PageableDefault(size = 10) Pageable pageable) {
+        return policyService.getAllPolicies(pageable);
+    }
+
     @GetMapping("/stats")
     public PolicyStatsResponse getPolicyStats() {
         return policyService.getPolicyStats();
