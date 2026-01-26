@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, ChevronDown, X, Home, FileText, BarChart3, Calendar, Settings, LogOut } from 'lucide-react';
+import { apiCall } from '@/app/utils/api';
 
 export default function NewPolicy() {
   const router = useRouter();
@@ -10,13 +11,13 @@ export default function NewPolicy() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [formData, setFormData] = useState({
     policyNo: '',
-    groupCode: 'GO01',
+    groupCode: '',
     groupHead: '',
     fup: '',
-    term: '20 Years',
+    term: '',
     address: '',
-    product: 'Endowment Plan',
-    mode: 'Yearly',
+    product: '',
+    mode: '',
     maturityDate: '',
     commencementDate: '',
     sumAssured: '',
@@ -25,6 +26,8 @@ export default function NewPolicy() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -79,11 +82,27 @@ export default function NewPolicy() {
     }
   };
 
-  const handleSavePolicy = (e: React.FormEvent) => {
+  const handleSavePolicy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      playNotificationSound();
-      setShowSuccessModal(true);
+      setLoading(true);
+      setApiError('');
+      
+      try {
+        const result = await apiCall('/api/v1/policy/createPolicy', {
+          method: 'POST',
+          body: JSON.stringify(formData),
+        });
+
+        console.log('Policy created successfully:', result);
+        playNotificationSound();
+        setShowSuccessModal(true);
+      } catch (err) {
+        console.error('Error creating policy:', err);
+        setApiError(err instanceof Error ? err.message : 'Failed to create policy');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -180,6 +199,13 @@ export default function NewPolicy() {
               <p className="text-gray-600">Enter the details to create a new insurance policy record</p>
             </div>
 
+            {/* API Error Message */}
+            {apiError && (
+              <div className="bg-red-500/10 border border-red-500 text-red-700 p-3 rounded-lg mb-6 text-sm">
+                {apiError}
+              </div>
+            )}
+
             {/* Form */}
             <form onSubmit={handleSavePolicy} className="space-y-6">
               {/* First Row */}
@@ -194,8 +220,7 @@ export default function NewPolicy() {
                     name="policyNo"
                     value={formData.policyNo}
                     onChange={handleInputChange}
-                    placeholder="AB123456"
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700 ${
                       errors.policyNo ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
@@ -207,16 +232,13 @@ export default function NewPolicy() {
                   <label className="block text-gray-700 font-semibold mb-2">
                     Group Code: <span className="text-gray-500 text-sm font-normal">(Optional)</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="groupCode"
                     value={formData.groupCode}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option>GO01</option>
-                    <option>GO02</option>
-                    <option>GO03</option>
-                  </select>
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700"
+                  />
                 </div>
 
                 {/* Group Head */}
@@ -229,8 +251,7 @@ export default function NewPolicy() {
                     name="groupHead"
                     value={formData.groupHead}
                     onChange={handleInputChange}
-                    placeholder="Rahul Sharma"
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700 ${
                       errors.groupHead ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
@@ -250,7 +271,7 @@ export default function NewPolicy() {
                     name="fup"
                     value={formData.fup}
                     onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700 ${
                       errors.fup ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
@@ -266,7 +287,7 @@ export default function NewPolicy() {
                     name="term"
                     value={formData.term}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700"
                   >
                     <option>20 Years</option>
                     <option>25 Years</option>
@@ -284,8 +305,7 @@ export default function NewPolicy() {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    placeholder="123, ABC Building, XYZ Street"
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700 ${
                       errors.address ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
@@ -304,7 +324,7 @@ export default function NewPolicy() {
                     name="mode"
                     value={formData.mode}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700"
                   >
                     <option>Yearly</option>
                     <option>Half-Yearly</option>
@@ -323,7 +343,7 @@ export default function NewPolicy() {
                     name="commencementDate"
                     value={formData.commencementDate}
                     onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700 ${
                       errors.commencementDate ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
@@ -340,8 +360,7 @@ export default function NewPolicy() {
                     name="sumAssured"
                     value={formData.sumAssured}
                     onChange={handleInputChange}
-                    placeholder="10,00,000"
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700 ${
                       errors.sumAssured ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
@@ -360,7 +379,7 @@ export default function NewPolicy() {
                     name="product"
                     value={formData.product}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700"
                   >
                     <option>Endowment Plan</option>
                     <option>Term Plan</option>
@@ -378,7 +397,7 @@ export default function NewPolicy() {
                     name="maturityDate"
                     value={formData.maturityDate}
                     onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700 ${
                       errors.maturityDate ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
@@ -395,8 +414,7 @@ export default function NewPolicy() {
                     name="premium"
                     value={formData.premium}
                     onChange={handleInputChange}
-                    placeholder="48,000"
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700 ${
                       errors.premium ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
@@ -416,8 +434,7 @@ export default function NewPolicy() {
                     name="policyHolder"
                     value={formData.policyHolder}
                     onChange={handleInputChange}
-                    placeholder="Ankit Mehta"
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700 ${
                       errors.policyHolder ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
@@ -429,9 +446,10 @@ export default function NewPolicy() {
               <div className="flex justify-end mt-8">
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-8 rounded-lg transition transform hover:scale-105"
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2 px-8 rounded-lg transition transform hover:scale-105 disabled:cursor-not-allowed"
                 >
-                  Save Policy
+                  {loading ? 'Saving...' : 'Save Policy'}
                 </button>
               </div>
             </form>

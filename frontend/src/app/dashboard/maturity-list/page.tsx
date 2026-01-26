@@ -48,12 +48,6 @@ export default function MaturityList() {
     }
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        alert('Authentication token not found. Please login.');
-        return;
-      }
-
       // Build query parameters
       const params = new URLSearchParams();
       if (maturityFromDate) {
@@ -62,14 +56,19 @@ export default function MaturityList() {
       if (maturityToDate) {
         params.append('maturityTo', maturityToDate);
       }
+      // Add pagination to fetch all records
+      params.append('page', '0');
+      params.append('size', '2000');
 
-      // Call API endpoint
-      const response = await apiCall(`/api/v1/policy/maturity?${params.toString()}`, {
+      const queryString = params.toString();
+      console.log('Fetching with query:', queryString);
+      
+      // Call API endpoint - apiCall handles Authorization header automatically
+      const response = await apiCall(`/api/v1/policy/maturity?${queryString}`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
       });
+
+      console.log('Maturity response:', response);
 
       if (response.content && Array.isArray(response.content)) {
         // Map API response to MaturityPolicy interface
@@ -84,6 +83,21 @@ export default function MaturityList() {
           ...policy
         }));
         setMaturityPolicies(mappedPolicies);
+        alert(`Successfully fetched ${mappedPolicies.length} policies`);
+      } else if (Array.isArray(response)) {
+        // If response is directly an array
+        const mappedPolicies = response.map((policy: any) => ({
+          id: policy.id || Math.random(),
+          policyNo: policy.policyNumber || policy.policyNo || '',
+          customerName: policy.personName || policy.customerName || '',
+          policyType: policy.product || policy.policyType || '',
+          maturityDate: policy.maturityDate || '',
+          amount: policy.sumAssured || policy.amount || 0,
+          status: policy.status || 'Pending',
+          ...policy
+        }));
+        setMaturityPolicies(mappedPolicies);
+        alert(`Successfully fetched ${mappedPolicies.length} policies`);
       } else {
         alert('No policies found for the selected date range.');
         setMaturityPolicies([]);
@@ -92,6 +106,7 @@ export default function MaturityList() {
     } catch (error: any) {
       console.error('Error fetching maturity records:', error);
       alert(`Error fetching records: ${error.message}`);
+      setMaturityPolicies([]);
     }
   };
 
@@ -328,32 +343,43 @@ export default function MaturityList() {
 
             {/* Pagination */}
             <div className="pagination-print-hide px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-              <span className="text-gray-600">Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, maturityPolicies.length)} of {maturityPolicies.length} entries</span>
+              <span className="text-gray-800 font-semibold">Showing {maturityPolicies.length === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + itemsPerPage, maturityPolicies.length)} of {maturityPolicies.length} entries</span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-2 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-2 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-800"
                 >
                   Previous
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 rounded ${
-                      currentPage === page
-                        ? 'bg-blue-600 text-white'
-                        : 'border border-gray-300 hover:bg-gray-100'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(
+                    (page) =>
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                  )
+                  .map((page, idx, arr) => (
+                    <React.Fragment key={page}>
+                      {idx > 0 && arr[idx - 1] !== page - 1 && (
+                        <span className="px-2 py-1 text-gray-800">...</span>
+                      )}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-2 rounded font-semibold ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'border border-gray-300 hover:bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  ))}
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-2 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-2 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-800"
                 >
                   Next
                 </button>

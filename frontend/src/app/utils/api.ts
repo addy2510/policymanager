@@ -44,6 +44,10 @@ export const apiCall = async (
         throw new Error('Session expired. Please login again.');
       }
       
+      if (response.status === 403) {
+        throw new Error('Access forbidden. Please check your permissions or try logging in again.');
+      }
+      
       // Try to get error message from response body
       let errorMessage = `API Error: ${response.status} ${response.statusText}`;
       try {
