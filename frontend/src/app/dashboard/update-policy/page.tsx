@@ -458,17 +458,14 @@ export default function UpdatePolicy() {
 
                     <div>
                       <label className="block text-gray-700 font-semibold mb-2">Policy Type:</label>
-                      <select
+                      <input
+                        type="text"
                         name="updatePolicyType"
                         value={formData.updatePolicyType}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
-                      >
-                        <option>Money Back Plan</option>
-                        <option>Endowment Plan</option>
-                        <option>ULIP</option>
-                        <option>Term Plan</option>
-                      </select>
+                        placeholder="e.g., Endowment Plan"
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
+                      />
                     </div>
 
                     <div>
@@ -484,17 +481,14 @@ export default function UpdatePolicy() {
 
                     <div>
                       <label className="block text-gray-700 font-semibold mb-2">Premium Frequency:</label>
-                      <select
+                      <input
+                        type="text"
                         name="updatePremiumFrequency"
                         value={formData.updatePremiumFrequency}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
-                      >
-                          <option value="Y">Y</option>
-                          <option value="H">H</option>
-                          <option value="Q">Q</option>
-                          <option value="M">M</option>
-                      </select>
+                        placeholder="e.g., Y, H, Q, M"
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
+                      />
                     </div>
                   </div>
 

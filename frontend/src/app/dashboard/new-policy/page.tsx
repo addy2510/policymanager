@@ -313,16 +313,14 @@ export default function NewPolicy() {
                   <label className="block text-gray-700 font-semibold mb-2">
                     Term
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="term"
                     value={formData.term}
                     onChange={handleInputChange}
+                    placeholder="e.g., 20 Years"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700"
-                  >
-                    <option>20 Years</option>
-                    <option>25 Years</option>
-                    <option>30 Years</option>
-                  </select>
+                  />
                 </div>
 
                 {/* Address */}
@@ -350,17 +348,14 @@ export default function NewPolicy() {
                   <label className="block text-gray-700 font-semibold mb-2">
                     Mode:
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="mode"
                     value={formData.mode}
                     onChange={handleInputChange}
+                    placeholder="e.g., Y, H, Q, M"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700"
-                  >
-                    <option value="Y">Y</option>
-                    <option value="H">H</option>
-                    <option value="Q">Q</option>
-                    <option value="M">M</option>
-                  </select>
+                  />
                 </div>
 
                 {/* Commencement Date */}
@@ -405,16 +400,14 @@ export default function NewPolicy() {
                   <label className="block text-gray-700 font-semibold mb-2">
                     Product
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="product"
                     value={formData.product}
                     onChange={handleInputChange}
+                    placeholder="e.g., Endowment Plan"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700"
-                  >
-                    <option>Endowment Plan</option>
-                    <option>Term Plan</option>
-                    <option>Whole Life Plan</option>
-                  </select>
+                  />
                 </div>
 
                 {/* Maturity Date */}
