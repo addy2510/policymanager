@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Menu, LogOut, Home, FileText, BarChart3, Calendar, Settings, AlertCircle, X, ChevronDown } from 'lucide-react';
+import { Menu, LogOut, Home, FileText, BarChart3, Calendar, Settings, AlertCircle, X, ChevronDown, Edit } from 'lucide-react';
+import { apiCall } from '@/app/utils/api';
 
 interface PolicyDetails {
   policyNo: string;
@@ -67,36 +68,49 @@ export default function UpdatePolicy() {
     localStorage.removeItem('user');
     router.push('/');
   };
+  const handleSearch = async () => {
+    if (!searchPolicyNo.trim()) {
+      alert('Please enter a policy number');
+      return;
+    }
 
-  // Mock policy data
-  const mockPolicies: Record<string, PolicyDetails> = {
-    'LP234567': {
-      policyNo: 'LP234567',
-      customerName: 'Lakshmi Patel',
-      policyType: 'Money Back Plan',
-      startDate: '15-Feb-2020',
-      premiumAmount: '15,000',
-      maturityDate: '15-Feb-2028',
-      premiumFrequency: 'Yearly',
-      policyStatus: 'Active',
-    },
-  };
+    try {
+      const params = new URLSearchParams();
+      params.append('policyNumber', searchPolicyNo.trim());
+      params.append('page', '0');
+      params.append('size', '1');
 
-  const handleSearch = () => {
-    const policy = mockPolicies[searchPolicyNo];
-    if (policy) {
+      const endpoint = `/api/v1/policy/search?${params.toString()}`;
+      const result = await apiCall(endpoint, { method: 'GET' });
+
+      const records = result?.content || [];
+      if (records.length === 0) {
+        alert('Policy not found');
+        setShowDetails(false);
+        return;
+      }
+
+      const record = records[0];
       setFormData({
-        ...policy,
-        updateCustomerName: policy.customerName,
-        updatePolicyType: policy.policyType,
-        updatePremiumAmount: policy.premiumAmount,
-        updateMaturityDate: policy.maturityDate,
-        updatePremiumFrequency: policy.premiumFrequency,
+        policyNo: record.policyNumber || record.policyNo || '',
+        customerName: record.personName || record.customerName || '',
+        policyType: record.policyType || '',
+        startDate: record.startDate || '',
+        premiumAmount: record.premium || record.premiumAmount || '',
+        maturityDate: record.maturityDate || '',
+        premiumFrequency: record.mode || record.premiumFrequency || 'Yearly',
+        policyStatus: record.status || 'Active',
+        updateCustomerName: record.personName || record.customerName || '',
+        updatePolicyType: record.policyType || '',
+        updatePremiumAmount: record.premium || record.premiumAmount || '',
+        updateMaturityDate: record.maturityDate || '',
+        updatePremiumFrequency: record.mode || record.premiumFrequency || 'Yearly',
       });
+
       setShowDetails(true);
-    } else {
-      alert('Policy not found');
-      setShowDetails(false);
+    } catch (err) {
+      console.error('Search error:', err);
+      alert('Failed to search policy. Check console for details.');
     }
   };
 
@@ -112,26 +126,91 @@ export default function UpdatePolicy() {
     setShowConfirm(true);
   };
 
-  const handleConfirmUpdate = () => {
-    setShowConfirm(false);
-    alert('Policy updated successfully!');
-    setShowDetails(false);
-    setSearchPolicyNo('');
-    setFormData({
-      policyNo: '',
-      customerName: '',
-      policyType: 'Money Back Plan',
-      startDate: '',
-      premiumAmount: '',
-      maturityDate: '',
-      premiumFrequency: 'Yearly',
-      policyStatus: 'Active',
-      updateCustomerName: '',
-      updatePolicyType: 'Money Back Plan',
-      updatePremiumAmount: '',
-      updateMaturityDate: '',
-      updatePremiumFrequency: 'Yearly',
-    });
+  const handleConfirmUpdate = async () => {
+    // Call backend PUT /api/v1/policy/{policyNumber} with changed fields
+    try {
+      const policyNumber = formData.policyNo;
+      if (!policyNumber) {
+        alert('Missing policy number');
+        return;
+      }
+
+      // Build request body with only changed fields
+      const body: any = {};
+
+      // personName (customer name)
+      if (formData.updateCustomerName && formData.updateCustomerName.trim() !== '' && formData.updateCustomerName !== formData.customerName) {
+        body.personName = formData.updateCustomerName.trim();
+      }
+
+      // premium
+      if (formData.updatePremiumAmount && String(formData.updatePremiumAmount).trim() !== '') {
+        const newPremium = Number(String(formData.updatePremiumAmount).replace(/,/g, ''));
+        const oldPremium = formData.premiumAmount ? Number(String(formData.premiumAmount).toString().replace(/,/g, '')) : NaN;
+        if (!isNaN(newPremium) && newPremium !== oldPremium) {
+          body.premium = newPremium;
+        }
+      }
+
+      // maturityDate
+      if (formData.updateMaturityDate && formData.updateMaturityDate !== formData.maturityDate) {
+        body.maturityDate = formData.updateMaturityDate;
+      }
+
+      // mode (premium frequency)
+      if (formData.updatePremiumFrequency && formData.updatePremiumFrequency !== formData.premiumFrequency) {
+        body.mode = formData.updatePremiumFrequency;
+      }
+
+      // product / policy type
+      if (formData.updatePolicyType && formData.updatePolicyType !== formData.policyType) {
+        body.product = formData.updatePolicyType;
+      }
+
+      // If nothing changed, skip the API call
+      if (Object.keys(body).length === 0) {
+        setShowConfirm(false);
+        alert('No changes detected to update.');
+        return;
+      }
+      console.log('Update body:', body);
+      const token = localStorage.getItem('authToken');
+      console.log('Token:', token);
+
+      const result = await apiCall(`/api/v1/policy/${policyNumber}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+
+      console.log(result);
+
+      setShowConfirm(false);
+      alert('Policy updated successfully!');
+      setShowDetails(false);
+      setSearchPolicyNo('');
+      setFormData({
+        policyNo: '',
+        customerName: '',
+        policyType: 'Money Back Plan',
+        startDate: '',
+        premiumAmount: '',
+        maturityDate: '',
+        premiumFrequency: 'Yearly',
+        policyStatus: 'Active',
+        updateCustomerName: '',
+        updatePolicyType: 'Money Back Plan',
+        updatePremiumAmount: '',
+        updateMaturityDate: '',
+        updatePremiumFrequency: 'Yearly',
+      });
+    } catch (err) {
+      console.error('Update error:', err);
+      alert(err instanceof Error ? err.message : 'Failed to update policy');
+    }
   };
 
   const handleCancel = () => {
@@ -267,127 +346,133 @@ export default function UpdatePolicy() {
             </div>
 
             {showDetails && (
-              <>
-                {/* Current Details */}
-                <div className="mb-8 bg-gray-50 p-6 rounded">
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">Update Policy</h2>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Left - Current Details */}
+                <div className="md:col-span-1 bg-gradient-to-b from-blue-50 to-white p-6 rounded shadow-sm">
+                  <h2 className="text-lg font-bold text-gray-800 mb-4">Policy Details</h2>
+                  <div className="space-y-3 text-sm text-gray-700">
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-1">Policy No:</label>
-                      <p className="text-gray-800">{formData.policyNo}</p>
+                      <div className="text-xs text-gray-500">Policy No</div>
+                      <div className="text-gray-800 font-medium">{formData.policyNo}</div>
                     </div>
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-1">Customer Name:</label>
-                      <p className="text-gray-800">{formData.customerName}</p>
+                      <div className="text-xs text-gray-500">Customer Name</div>
+                      <div className="text-gray-800">{formData.customerName}</div>
                     </div>
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-1">Policy Type:</label>
-                      <p className="text-gray-800">{formData.policyType}</p>
+                      <div className="text-xs text-gray-500">Policy Type</div>
+                      <div className="text-gray-800">{formData.policyType}</div>
                     </div>
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-1">Start Date:</label>
-                      <p className="text-gray-800">{formData.startDate}</p>
+                      <div className="text-xs text-gray-500">Start Date</div>
+                      <div className="text-gray-800">{formData.startDate}</div>
                     </div>
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-1">Premium Amount:</label>
-                      <p className="text-gray-800">₹ {formData.premiumAmount}</p>
+                      <div className="text-xs text-gray-500">Premium Amount</div>
+                      <div className="text-gray-800">₹ {formData.premiumAmount}</div>
                     </div>
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-1">Maturity Date:</label>
-                      <p className="text-gray-800">{formData.maturityDate}</p>
+                      <div className="text-xs text-gray-500">Maturity Date</div>
+                      <div className="text-gray-800">{formData.maturityDate}</div>
                     </div>
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-1">Premium Frequency:</label>
-                      <p className="text-gray-800">{formData.premiumFrequency}</p>
+                      <div className="text-xs text-gray-500">Premium Frequency</div>
+                      <div className="text-gray-800">{formData.premiumFrequency}</div>
                     </div>
                     <div>
-                      <label className="block text-gray-700 font-semibold mb-1">Policy Status:</label>
-                      <p className="text-green-600 font-semibold">{formData.policyStatus}</p>
+                      <div className="text-xs text-gray-500">Policy Status</div>
+                      <div className="text-green-600 font-semibold">{formData.policyStatus}</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Edit Section */}
-                <div className="grid grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-2">Customer Name:</label>
-                    <input
-                      type="text"
-                      name="updateCustomerName"
-                      value={formData.updateCustomerName}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-2">Premium Amount:</label>
-                    <div className="flex items-center">
-                      <span className="mr-2 text-gray-700">₹</span>
+                {/* Right - Edit Form */}
+                <div className="md:col-span-2 bg-white p-6 rounded shadow-sm relative">
+                  
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Customer Name:</label>
                       <input
                         type="text"
-                        name="updatePremiumAmount"
-                        value={formData.updatePremiumAmount}
+                        name="updateCustomerName"
+                        value={formData.updateCustomerName}
                         onChange={handleInputChange}
                         className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
                       />
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-2">Policy Type:</label>
-                    <select
-                      name="updatePolicyType"
-                      value={formData.updatePolicyType}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
-                    >
-                      <option>Money Back Plan</option>
-                      <option>Endowment Plan</option>
-                      <option>ULIP</option>
-                      <option>Term Plan</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-2">Maturity Date:</label>
-                    <input
-                      type="date"
-                      name="updateMaturityDate"
-                      value={formData.updateMaturityDate}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-2">Premium Frequency:</label>
-                    <select
-                      name="updatePremiumFrequency"
-                      value={formData.updatePremiumFrequency}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
-                    >
-                      <option>Yearly</option>
-                      <option>Half-Yearly</option>
-                      <option>Quarterly</option>
-                      <option>Monthly</option>
-                    </select>
-                  </div>
-                </div>
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Premium Amount:</label>
+                      <div className="flex items-center">
+                        <span className="mr-2 text-gray-700">₹</span>
+                        <input
+                          type="text"
+                          name="updatePremiumAmount"
+                          value={formData.updatePremiumAmount}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
+                        />
+                      </div>
+                    </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-4 justify-end">
-                  <button
-                    onClick={handleCancel}
-                    className="bg-gray-400 hover:bg-gray-500 text-white px-8 py-2 rounded font-semibold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveChanges}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded font-semibold"
-                  >
-                    Save Changes
-                  </button>
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Policy Type:</label>
+                      <select
+                        name="updatePolicyType"
+                        value={formData.updatePolicyType}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
+                      >
+                        <option>Money Back Plan</option>
+                        <option>Endowment Plan</option>
+                        <option>ULIP</option>
+                        <option>Term Plan</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Maturity Date:</label>
+                      <input
+                        type="date"
+                        name="updateMaturityDate"
+                        value={formData.updateMaturityDate}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Premium Frequency:</label>
+                      <select
+                        name="updatePremiumFrequency"
+                        value={formData.updatePremiumFrequency}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
+                      >
+                        <option>Yearly</option>
+                        <option>Half-Yearly</option>
+                        <option>Quarterly</option>
+                        <option>Monthly</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 justify-end mt-6">
+                    <button
+                      onClick={handleCancel}
+                      className="bg-gray-400 hover:bg-gray-500 text-white px-8 py-2 rounded font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveChanges}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded font-semibold"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>

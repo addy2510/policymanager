@@ -23,6 +23,8 @@ export default function NewPolicy() {
     sumAssured: '',
     premium: '',
     policyHolder: '',
+    dob: '',
+    policyStatus: 'Active',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -47,7 +49,6 @@ export default function NewPolicy() {
   };
 
   const playNotificationSound = () => {
-    // Create a simple beep sound using Web Audio API
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
@@ -89,9 +90,38 @@ export default function NewPolicy() {
       setApiError('');
       
       try {
+        const token = localStorage.getItem('authToken');
+
+        // Map frontend form fields to backend PolicyRequest fields
+        const requestBody: any = {
+          policyNumber: formData.policyNo ? Number(String(formData.policyNo).replace(/,/g, '')) : undefined,
+          personName: formData.policyHolder || undefined,
+          groupCode: formData.groupCode || undefined,
+          groupHead: formData.groupHead || undefined,
+          fup: formData.fup || undefined,
+          term: formData.term || undefined,
+          address: formData.address || undefined,
+          product: formData.product || undefined,
+          mode: formData.mode || undefined,
+          dob: formData.dob || undefined,
+          maturityDate: formData.maturityDate || undefined,
+          commencementDate: formData.commencementDate || undefined,
+          sumAssured: formData.sumAssured ? Number(String(formData.sumAssured).replace(/,/g, '')) : undefined,
+          premium: formData.premium ? Number(String(formData.premium).replace(/,/g, '')) : undefined,
+        };
+
+        // Remove undefined props
+        Object.keys(requestBody).forEach(k => requestBody[k] === undefined && delete requestBody[k]);
+
+        console.log('requestBody', requestBody);
+
         const result = await apiCall('/api/v1/policy/createPolicy', {
           method: 'POST',
-          body: JSON.stringify(formData),
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(requestBody),
         });
 
         console.log('Policy created successfully:', result);
@@ -439,6 +469,34 @@ export default function NewPolicy() {
                     }`}
                   />
                   {errors.policyHolder && <p className="text-red-500 text-sm mt-1">{errors.policyHolder}</p>}
+                </div>
+
+                {/* DOB */}
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">DOB</label>
+                  <input
+                    type="date"
+                    name="dob"
+                    value={formData.dob}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700"
+                  />
+                </div>
+
+                {/* Policy Status (readonly computed) */}
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">Status</label>
+                  <input
+                    type="text"
+                    name="policyStatus"
+                    value={
+                      formData.maturityDate
+                        ? (new Date(formData.maturityDate) > new Date() ? 'Active' : 'Matured')
+                        : 'Active'
+                    }
+                    readOnly
+                    className="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-800"
+                  />
                 </div>
               </div>
 
