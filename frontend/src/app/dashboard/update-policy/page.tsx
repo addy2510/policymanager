@@ -36,6 +36,7 @@ export default function UpdatePolicy() {
   const [searchPolicyNo, setSearchPolicyNo] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<FormData>({
     policyNo: '',
@@ -177,7 +178,7 @@ export default function UpdatePolicy() {
       const token = localStorage.getItem('authToken');
       console.log('Token:', token);
 
-      const result = await apiCall(`/api/v1/policy/${policyNumber}`, {
+      const result = await apiCall(`/api/v1/policy/update/${policyNumber}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -189,24 +190,43 @@ export default function UpdatePolicy() {
       console.log(result);
 
       setShowConfirm(false);
-      alert('Policy updated successfully!');
-      setShowDetails(false);
-      setSearchPolicyNo('');
-      setFormData({
-        policyNo: '',
-        customerName: '',
-        policyType: 'Money Back Plan',
-        startDate: '',
-        premiumAmount: '',
-        maturityDate: '',
-        premiumFrequency: 'Yearly',
-        policyStatus: 'Active',
-        updateCustomerName: '',
-        updatePolicyType: 'Money Back Plan',
-        updatePremiumAmount: '',
-        updateMaturityDate: '',
-        updatePremiumFrequency: 'Yearly',
-      });
+      
+      // Refetch the updated policy
+      try {
+        const refetchResult = await apiCall(
+          `/api/v1/policy/search?policyNumber=${policyNumber}&page=0&size=1`,
+          {
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          }
+        );
+
+        if (refetchResult && refetchResult.content && refetchResult.content.length > 0) {
+          const updatedPolicy = refetchResult.content[0];
+          setFormData(prev => ({
+            ...prev,
+            policyNo: updatedPolicy.policyNo || '',
+            customerName: updatedPolicy.personName || '',
+            policyType: updatedPolicy.product || 'Money Back Plan',
+            startDate: updatedPolicy.commencementDate || '',
+            premiumAmount: updatedPolicy.premium ? String(updatedPolicy.premium) : '',
+            maturityDate: updatedPolicy.maturityDate || '',
+            premiumFrequency: updatedPolicy.mode || 'Y',
+            policyStatus: updatedPolicy.status || 'Active',
+            updateCustomerName: '',
+            updatePolicyType: updatedPolicy.product || 'Money Back Plan',
+            updatePremiumAmount: '',
+            updateMaturityDate: '',
+            updatePremiumFrequency: updatedPolicy.mode || 'Y',
+          }));
+        }
+      } catch (refetchError) {
+        console.error('Failed to refetch policy:', refetchError);
+      }
+
+      // Show success modal
+      setShowSuccessModal(true);
     } catch (err) {
       console.error('Update error:', err);
       alert(err instanceof Error ? err.message : 'Failed to update policy');
@@ -214,6 +234,27 @@ export default function UpdatePolicy() {
   };
 
   const handleCancel = () => {
+    setShowDetails(false);
+    setSearchPolicyNo('');
+    setFormData({
+      policyNo: '',
+      customerName: '',
+      policyType: 'Money Back Plan',
+      startDate: '',
+      premiumAmount: '',
+      maturityDate: '',
+      premiumFrequency: 'Yearly',
+      policyStatus: 'Active',
+      updateCustomerName: '',
+      updatePolicyType: 'Money Back Plan',
+      updatePremiumAmount: '',
+      updateMaturityDate: '',
+      updatePremiumFrequency: 'Yearly',
+    });
+  };
+
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
     setShowDetails(false);
     setSearchPolicyNo('');
     setFormData({
@@ -449,10 +490,10 @@ export default function UpdatePolicy() {
                         onChange={handleInputChange}
                         className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
                       >
-                        <option>Yearly</option>
-                        <option>Half-Yearly</option>
-                        <option>Quarterly</option>
-                        <option>Monthly</option>
+                          <option value="Y">Y</option>
+                          <option value="H">H</option>
+                          <option value="Q">Q</option>
+                          <option value="M">M</option>
                       </select>
                     </div>
                   </div>
@@ -512,6 +553,32 @@ export default function UpdatePolicy() {
                 Yes, Update
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4 text-center animate-scale-up">
+            <div className="flex justify-center mb-6">
+              <div className="relative w-20 h-20">
+                <div className="absolute inset-0 bg-green-100 rounded-full animate-pulse"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <svg className="w-12 h-12 text-green-500 animate-bounce" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Success!</h2>
+            <p className="text-gray-600 mb-8">Policy has been updated successfully with the latest changes.</p>
+            <button
+              onClick={handleCloseSuccessModal}
+              className="w-full bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition duration-200"
+            >
+              OK
+            </button>
           </div>
         </div>
       )}

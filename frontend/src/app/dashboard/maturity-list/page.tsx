@@ -97,7 +97,6 @@ export default function MaturityList() {
           ...policy
         }));
         setMaturityPolicies(mappedPolicies);
-        alert(`Successfully fetched ${mappedPolicies.length} policies`);
       } else {
         alert('No policies found for the selected date range.');
         setMaturityPolicies([]);

@@ -356,10 +356,10 @@ export default function NewPolicy() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder:text-gray-700"
                   >
-                    <option>Yearly</option>
-                    <option>Half-Yearly</option>
-                    <option>Quarterly</option>
-                    <option>Monthly</option>
+                    <option value="Y">Y</option>
+                    <option value="H">H</option>
+                    <option value="Q">Q</option>
+                    <option value="M">M</option>
                   </select>
                 </div>
 
