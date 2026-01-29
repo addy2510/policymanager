@@ -50,6 +50,18 @@ export default function UpdatePolicy() {
   const pathname = usePathname() || '';
   const [user, setUser] = useState<User | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (window.innerWidth < 768) {
+        setSidebarOpen(false);
+      }
+      const onResize = () => {
+        if (window.innerWidth < 768) setSidebarOpen(false);
+      };
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
+    }
+  }, []);
   const [searchPolicyNo, setSearchPolicyNo] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -538,7 +550,47 @@ export default function UpdatePolicy() {
                     </div>
                     <div>
                       <div className="text-xs text-gray-500">Policy Status</div>
-                      <div className="text-green-600 font-semibold">{formData.policyStatus}</div>
+                      <div className="text-gray-800 font-semibold">{formData.policyStatus?.toString().toUpperCase()}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">Group Code</div>
+                      <div className="text-gray-800">{formData.groupCode || 'N/A'}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">FUP</div>
+                      <div className="text-gray-800">{formData.fup || 'N/A'}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">Term</div>
+                      <div className="text-gray-800">{formData.term || 'N/A'}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">Date of Birth</div>
+                      <div className="text-gray-800">{formData.dob || 'N/A'}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">Commencement Date</div>
+                      <div className="text-gray-800">{formData.startDate || 'N/A'}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">Sum Assured</div>
+                      <div className="text-gray-800">{formData.sumAssured ? `₹ ${formData.sumAssured}` : 'N/A'}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">Group Head</div>
+                      <div className="text-gray-800">{formData.groupHead || 'N/A'}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500">Address</div>
+                      <div className="text-gray-800">{formData.address || 'N/A'}</div>
                     </div>
                   </div>
                 </div>
@@ -547,7 +599,7 @@ export default function UpdatePolicy() {
                 <div className="md:col-span-2 bg-white p-6 rounded shadow-sm relative">
                   
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-gray-700 font-semibold mb-2">Customer Name:</label>
                       <input
@@ -712,7 +764,7 @@ export default function UpdatePolicy() {
                     </div>
                   </div>
 
-                  <div className="flex gap-4 justify-end mt-6">
+                  <div className="flex flex-col md:flex-row gap-4 justify-end mt-6">
                     <button
                       onClick={handleCancel}
                       className="bg-gray-400 hover:bg-gray-500 text-white px-8 py-2 rounded font-semibold"
@@ -735,7 +787,7 @@ export default function UpdatePolicy() {
 
       {/* Confirmation Dialog */}
       {showConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
@@ -773,7 +825,7 @@ export default function UpdatePolicy() {
 
       {/* Success Modal */}
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
           <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4 text-center animate-scale-up">
             <div className="flex justify-center mb-6">
               <div className="relative w-20 h-20">

@@ -42,6 +42,18 @@ export default function ViewRecords() {
   const router = useRouter();
   const pathname = usePathname() || '';
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (window.innerWidth < 768) {
+        setSidebarOpen(false);
+      }
+      const onResize = () => {
+        if (window.innerWidth < 768) setSidebarOpen(false);
+      };
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
+    }
+  }, []);
   const [allRecords, setAllRecords] = useState<PolicyRecord[]>([]);
 
   const [records, setRecords] = useState<PolicyRecord[]>([]);
@@ -530,8 +542,34 @@ export default function ViewRecords() {
               </p>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
+            {/* Mobile list (cards) */}
+            <div className="md:hidden space-y-4">
+              {paginatedRecords.map((record) => (
+                <div key={record.id} className="bg-white border rounded-lg p-4 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-sm text-gray-500">{record.groupCode || ''}</div>
+                      <div className="text-lg font-bold text-gray-800">{record.policyNo || record.policyNumber || 'N/A'}</div>
+                      <div className="text-sm text-gray-700">{record.customerName || record.personName || 'N/A'}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="mb-2">
+                        <span className={`${getStatusColor(record.status || 'Active')} px-3 py-1 rounded-full text-xs font-semibold`}>{(record.status || 'Active').toString().toUpperCase()}</span>
+                      </div>
+                      <button
+                        onClick={() => { setSelectedPolicy(record); setShowModal(true); }}
+                        className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
+                      >
+                        View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Table (desktop) */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-100 border-b">
                   <tr>
