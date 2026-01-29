@@ -38,7 +38,9 @@ public class PolicyService {
         String uniqueGroupCode = generateUniqueGroupCode();
 
         UserPolicyDetails policy = mapToEntity(request);
-        policy.setGroupCode(uniqueGroupCode);
+        if (policy.getGroupCode() == null || policy.getGroupCode().isEmpty()) {
+            policy.setGroupCode(uniqueGroupCode);
+        }
         UserPolicyDetails saved = policyRepository.save(policy);
 
         return mapToResponse(saved);
