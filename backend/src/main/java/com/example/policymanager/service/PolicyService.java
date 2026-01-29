@@ -3,6 +3,8 @@ package com.example.policymanager.service;
 import com.example.policymanager.beans.PolicyRequest;
 import com.example.policymanager.beans.PolicyResponse;
 import com.example.policymanager.beans.PolicyStatsResponse;
+import com.example.policymanager.exception.PolicyAlreadyExistsException;
+import com.example.policymanager.exception.PolicyNotFoundException;
 import com.example.policymanager.repository.UserPolicyRepository;
 import com.example.policymanager.tables.UserPolicyDetails;
 import com.example.status.PolicyStatus;
@@ -29,7 +31,8 @@ public class PolicyService {
     public PolicyResponse createPolicy(PolicyRequest request) {
 
         if (policyRepository.existsById(request.getPolicyNumber())) {
-            throw new RuntimeException("Policy number already exists");
+            throw new PolicyAlreadyExistsException(
+                    "Policy number " + request.getPolicyNumber() + " already exists");
         }
 
         String uniqueGroupCode = generateUniqueGroupCode();
@@ -47,7 +50,7 @@ public class PolicyService {
     public PolicyResponse updatePolicy(String policyNumber, PolicyRequest request) {
 
         UserPolicyDetails existing = policyRepository.findById(Long.valueOf(policyNumber))
-                .orElseThrow(() -> new RuntimeException("Policy not found"));
+                .orElseThrow(() -> new PolicyNotFoundException("Policy not found: " + policyNumber));
 
         // Update fields
         if (request.getPersonName() != null) {
@@ -216,11 +219,15 @@ public class PolicyService {
         response.setSumAssured(entity.getSumAssured());
         response.setGroupHead(entity.getGroupHead());
 
-        // Set status based on maturity date
-        if (entity.getMaturityDate().isAfter(LocalDate.now())) {
-            response.setStatus(PolicyStatus.ACTIVE);
+        // Set status based on maturity date (null-safe)
+        if (entity.getMaturityDate() != null) {
+            if (entity.getMaturityDate().isAfter(LocalDate.now())) {
+                response.setStatus(PolicyStatus.ACTIVE);
+            } else {
+                response.setStatus(PolicyStatus.MATURED);
+            }
         } else {
-            response.setStatus(PolicyStatus.MATURED);
+            response.setStatus(PolicyStatus.ACTIVE);
         }
 
         return response;

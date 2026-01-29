@@ -17,12 +17,12 @@ public class PolicyController {
     @Autowired
     private PolicyService policyService;
 
-    @PostMapping
+    @PostMapping("/createPolicy")
     public PolicyResponse createPolicy(@RequestBody PolicyRequest request) {
         return policyService.createPolicy(request);
     }
 
-    @PutMapping("/{policyNumber}")
+    @PutMapping("/update/{policyNumber}")
     public PolicyResponse updatePolicy(
             @PathVariable String policyNumber,
             @RequestBody PolicyRequest request) {
