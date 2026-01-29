@@ -283,15 +283,16 @@ export default function ViewRecords() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active":
-        return "bg-emerald-500 text-white";
-      case "Matured":
-        return "bg-amber-500 text-white";
-      case "Lapsed":
-        return "bg-red-500 text-white";
+    const s = (status || '').toString().toUpperCase();
+    switch (s) {
+      case 'ACTIVE':
+        return 'bg-emerald-500 text-white';
+      case 'MATURED':
+        return 'bg-red-500 text-white';
+      case 'LAPSED':
+        return 'bg-red-500 text-white';
       default:
-        return "bg-gray-500 text-white";
+        return 'bg-gray-500 text-white';
     }
   };
 

@@ -14,6 +14,13 @@ interface PolicyDetails {
   maturityDate: string;
   premiumFrequency: string;
   policyStatus: string;
+  groupCode?: string;
+  fup?: string;
+  term?: string;
+  dob?: string;
+  address?: string;
+  sumAssured?: string;
+  groupHead?: string;
 }
 
 interface FormData extends PolicyDetails {
@@ -22,6 +29,15 @@ interface FormData extends PolicyDetails {
   updatePremiumAmount: string;
   updateMaturityDate: string;
   updatePremiumFrequency: string;
+  updateGroupCode: string;
+  updateFup: string;
+  updateTerm: string;
+  updateDob: string;
+  updateAddress: string;
+  updateCommencementDate: string;
+  updateSumAssured: string;
+  updateGroupHead: string;
+  updatePolicyStatus: string;
 }
 
 interface User {
@@ -53,6 +69,15 @@ export default function UpdatePolicy() {
     updatePremiumAmount: '',
     updateMaturityDate: '',
     updatePremiumFrequency: 'Yearly',
+    updateGroupCode: '',
+    updateFup: '',
+    updateTerm: '',
+    updateDob: '',
+    updateAddress: '',
+    updateCommencementDate: '',
+    updateSumAssured: '',
+    updateGroupHead: '',
+    updatePolicyStatus: 'ACTIVE',
   });
 
   useEffect(() => {
@@ -101,12 +126,28 @@ export default function UpdatePolicy() {
         premiumAmount: record.premium || record.premiumAmount || '',
         maturityDate: record.maturityDate || '',
         premiumFrequency: record.mode || record.premiumFrequency || 'Y',
-        policyStatus: record.status || 'Active',
+        policyStatus: record.status ? String(record.status) : 'ACTIVE',
+        groupCode: record.groupCode || '',
+        fup: record.fup || '',
+        term: record.term || '',
+        dob: record.Dob || record.dob || '',
+        address: record.address || '',
+        sumAssured: record.sumAssured ? String(record.sumAssured) : '',
+        groupHead: record.groupHead || '',
         updateCustomerName: record.personName || record.customerName || '',
         updatePolicyType: record.product || record.policyType || '',
         updatePremiumAmount: record.premium || record.premiumAmount || '',
         updateMaturityDate: record.maturityDate || '',
         updatePremiumFrequency: record.mode || record.premiumFrequency || 'Y',
+        updateGroupCode: record.groupCode || '',
+        updateFup: record.fup || '',
+        updateTerm: record.term || '',
+        updateDob: record.Dob || record.dob || '',
+        updateAddress: record.address || '',
+        updateCommencementDate: record.commencementDate || record.startDate || '',
+        updateSumAssured: record.sumAssured ? String(record.sumAssured) : '',
+        updateGroupHead: record.groupHead || '',
+        updatePolicyStatus: record.status ? String(record.status) : 'ACTIVE',
       });
 
       setShowDetails(true);
@@ -116,7 +157,7 @@ export default function UpdatePolicy() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -145,6 +186,31 @@ export default function UpdatePolicy() {
         body.personName = formData.updateCustomerName.trim();
       }
 
+      // groupCode
+      if (formData.updateGroupCode && formData.updateGroupCode.trim() !== '' && formData.updateGroupCode !== formData.groupCode) {
+        body.groupCode = formData.updateGroupCode.trim();
+      }
+
+      // fup
+      if (formData.updateFup && formData.updateFup.trim() !== '' && formData.updateFup !== formData.fup) {
+        body.fup = formData.updateFup.trim();
+      }
+
+      // term
+      if (formData.updateTerm && formData.updateTerm.trim() !== '' && formData.updateTerm !== formData.term) {
+        body.term = formData.updateTerm.trim();
+      }
+
+      // Dob
+      if (formData.updateDob && formData.updateDob !== formData.dob) {
+        body.Dob = formData.updateDob;
+      }
+
+      // address
+      if (formData.updateAddress && formData.updateAddress.trim() !== '' && formData.updateAddress !== formData.address) {
+        body.address = formData.updateAddress.trim();
+      }
+
       // premium
       if (formData.updatePremiumAmount && String(formData.updatePremiumAmount).trim() !== '') {
         const newPremium = Number(String(formData.updatePremiumAmount).replace(/,/g, ''));
@@ -167,6 +233,30 @@ export default function UpdatePolicy() {
       // product / policy type
       if (formData.updatePolicyType && formData.updatePolicyType !== formData.policyType) {
         body.product = formData.updatePolicyType;
+      }
+
+      // commencementDate
+      if (formData.updateCommencementDate && formData.updateCommencementDate !== formData.startDate) {
+        body.commencementDate = formData.updateCommencementDate;
+      }
+
+      // sumAssured
+      if (formData.updateSumAssured && String(formData.updateSumAssured).trim() !== '') {
+        const newSum = Number(String(formData.updateSumAssured).replace(/,/g, ''));
+        const oldSum = formData.sumAssured ? Number(String(formData.sumAssured).toString().replace(/,/g, '')) : NaN;
+        if (!isNaN(newSum) && newSum !== oldSum) {
+          body.sumAssured = newSum;
+        }
+      }
+
+      // groupHead
+      if (formData.updateGroupHead && formData.updateGroupHead.trim() !== '' && formData.updateGroupHead !== formData.groupHead) {
+        body.groupHead = formData.updateGroupHead.trim();
+      }
+
+      // status
+      if (formData.updatePolicyStatus && formData.updatePolicyStatus !== formData.policyStatus) {
+        body.status = formData.updatePolicyStatus;
       }
 
       // If nothing changed, skip the API call
@@ -214,12 +304,28 @@ export default function UpdatePolicy() {
             premiumAmount: updatedPolicy.premium ? String(updatedPolicy.premium) : '',
             maturityDate: updatedPolicy.maturityDate || '',
             premiumFrequency: updatedPolicy.mode || 'Y',
-            policyStatus: updatedPolicy.status || 'Active',
+            policyStatus: updatedPolicy.status ? String(updatedPolicy.status) : 'ACTIVE',
+            groupCode: updatedPolicy.groupCode || '',
+            fup: updatedPolicy.fup || '',
+            term: updatedPolicy.term || '',
+            dob: updatedPolicy.Dob || updatedPolicy.dob || '',
+            address: updatedPolicy.address || '',
+            sumAssured: updatedPolicy.sumAssured ? String(updatedPolicy.sumAssured) : '',
+            groupHead: updatedPolicy.groupHead || '',
             updateCustomerName: '',
             updatePolicyType: updatedPolicy.product || 'Money Back Plan',
             updatePremiumAmount: '',
             updateMaturityDate: '',
             updatePremiumFrequency: updatedPolicy.mode || 'Y',
+            updateGroupCode: updatedPolicy.groupCode || '',
+            updateFup: updatedPolicy.fup || '',
+            updateTerm: updatedPolicy.term || '',
+            updateDob: updatedPolicy.Dob || updatedPolicy.dob || '',
+            updateAddress: updatedPolicy.address || '',
+            updateCommencementDate: updatedPolicy.commencementDate || '',
+            updateSumAssured: updatedPolicy.sumAssured ? String(updatedPolicy.sumAssured) : '',
+            updateGroupHead: updatedPolicy.groupHead || '',
+            updatePolicyStatus: updatedPolicy.status ? String(updatedPolicy.status) : 'ACTIVE',
           }));
         }
       } catch (refetchError) {
@@ -251,6 +357,15 @@ export default function UpdatePolicy() {
       updatePremiumAmount: '',
       updateMaturityDate: '',
       updatePremiumFrequency: 'Yearly',
+      updateGroupCode: '',
+      updateFup: '',
+      updateTerm: '',
+      updateDob: '',
+      updateAddress: '',
+      updateCommencementDate: '',
+      updateSumAssured: '',
+      updateGroupHead: '',
+      updatePolicyStatus: 'ACTIVE',
     });
   };
 
@@ -272,6 +387,15 @@ export default function UpdatePolicy() {
       updatePremiumAmount: '',
       updateMaturityDate: '',
       updatePremiumFrequency: 'Yearly',
+      updateGroupCode: '',
+      updateFup: '',
+      updateTerm: '',
+      updateDob: '',
+      updateAddress: '',
+      updateCommencementDate: '',
+      updateSumAssured: '',
+      updateGroupHead: '',
+      updatePolicyStatus: 'ACTIVE',
     });
   };
 
@@ -433,6 +557,110 @@ export default function UpdatePolicy() {
                         onChange={handleInputChange}
                         className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Group Code:</label>
+                      <input
+                        type="text"
+                        name="updateGroupCode"
+                        value={formData.updateGroupCode}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">FUP:</label>
+                      <input
+                        type="text"
+                        name="updateFup"
+                        value={formData.updateFup}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Term:</label>
+                      <input
+                        type="text"
+                        name="updateTerm"
+                        value={formData.updateTerm}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">DOB:</label>
+                      <input
+                        type="date"
+                        name="updateDob"
+                        value={formData.updateDob}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Commencement Date:</label>
+                      <input
+                        type="date"
+                        name="updateCommencementDate"
+                        value={formData.updateCommencementDate}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Sum Assured:</label>
+                      <div className="flex items-center">
+                        <span className="mr-2 text-gray-700">₹</span>
+                        <input
+                          type="text"
+                          name="updateSumAssured"
+                          value={formData.updateSumAssured}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-gray-700 font-semibold mb-2">Address:</label>
+                      <textarea
+                        name="updateAddress"
+                        value={formData.updateAddress}
+                        onChange={handleInputChange as any}
+                        rows={3}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Group Head:</label>
+                      <input
+                        type="text"
+                        name="updateGroupHead"
+                        value={formData.updateGroupHead}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-500 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Policy Status:</label>
+                      <select
+                        name="updatePolicyStatus"
+                        value={formData.updatePolicyStatus}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-800 bg-white"
+                      >
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="MATURED">MATURED</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block text-gray-700 font-semibold mb-2">Premium Amount:</label>
