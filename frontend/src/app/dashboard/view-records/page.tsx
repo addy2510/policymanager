@@ -330,35 +330,35 @@ export default function ViewRecords() {
         <nav className="flex-1 p-4 space-y-2">
           <div
             onClick={() => router.push('/dashboard')}
-            className={pathname === '/dashboard' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+            className={pathname === '/dashboard' || pathname === '/' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
           >
             <Home size={20} />
             {sidebarOpen && <span>Dashboard</span>}
           </div>
           <div
             onClick={() => router.push('/dashboard/new-policy')}
-            className={pathname === '/dashboard/new-policy' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+            className={pathname?.startsWith('/dashboard/new-policy') ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
           >
             <FileText size={20} />
             {sidebarOpen && <span>Policies</span>}
           </div>
           <div
             onClick={() => router.push('/dashboard/view-records')}
-            className={pathname === '/dashboard/view-records' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+            className={pathname?.startsWith('/dashboard/view-records') ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
           >
             <BarChart3 size={20} />
             {sidebarOpen && <span>Records</span>}
           </div>
           <div
             onClick={() => router.push('/dashboard/maturity-list')}
-            className={pathname === '/dashboard/maturity-list' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+            className={pathname?.startsWith('/dashboard/maturity-list') ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
           >
             <Calendar size={20} />
             {sidebarOpen && <span>Maturity List</span>}
           </div>
           <div
             onClick={() => router.push('/dashboard/update-policy')}
-            className={pathname === '/dashboard/update-policy' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+            className={pathname?.startsWith('/dashboard/update-policy') ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
           >
             <Settings size={20} />
             {sidebarOpen && <span>Update</span>}

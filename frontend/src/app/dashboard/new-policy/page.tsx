@@ -164,11 +164,11 @@ export default function NewPolicy() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
-          <div onClick={() => router.push('/dashboard')} className={pathname === '/dashboard' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}>
+          <div onClick={() => router.push('/dashboard')} className={pathname === '/dashboard' || pathname === '/' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}>
             <Home size={20} />
             {sidebarOpen && <span>Dashboard</span>}
           </div>
-          <div onClick={() => router.push('/dashboard/new-policy')} className={pathname === '/dashboard/new-policy' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}>
+          <div onClick={() => router.push('/dashboard/new-policy')} className={pathname?.startsWith('/dashboard/new-policy') ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}>
             <FileText size={20} />
             {sidebarOpen && <span>Policies</span>}
           </div>
