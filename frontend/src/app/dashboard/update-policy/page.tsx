@@ -95,17 +95,17 @@ export default function UpdatePolicy() {
       setFormData({
         policyNo: record.policyNumber || record.policyNo || '',
         customerName: record.personName || record.customerName || '',
-        policyType: record.policyType || '',
-        startDate: record.startDate || '',
+        policyType: record.product || record.policyType || '',
+        startDate: record.commencementDate || record.startDate || '',
         premiumAmount: record.premium || record.premiumAmount || '',
         maturityDate: record.maturityDate || '',
-        premiumFrequency: record.mode || record.premiumFrequency || 'Yearly',
+        premiumFrequency: record.mode || record.premiumFrequency || 'Y',
         policyStatus: record.status || 'Active',
         updateCustomerName: record.personName || record.customerName || '',
-        updatePolicyType: record.policyType || '',
+        updatePolicyType: record.product || record.policyType || '',
         updatePremiumAmount: record.premium || record.premiumAmount || '',
         updateMaturityDate: record.maturityDate || '',
-        updatePremiumFrequency: record.mode || record.premiumFrequency || 'Yearly',
+        updatePremiumFrequency: record.mode || record.premiumFrequency || 'Y',
       });
 
       setShowDetails(true);
