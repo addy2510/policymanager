@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Menu,
   LogOut,
@@ -40,6 +40,7 @@ interface PolicyRecord {
 
 export default function ViewRecords() {
   const router = useRouter();
+  const pathname = usePathname() || '';
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [allRecords, setAllRecords] = useState<PolicyRecord[]>([]);
 
@@ -296,9 +297,9 @@ export default function ViewRecords() {
 
   // Calculate statistics
   const totalPolicies = records.length;
-  const activePolicies = records.filter((r) => r.status === "Active").length;
-  const maturedPolicies = records.filter((r) => r.status === "Matured").length;
-  const lapsedPolicies = records.filter((r) => r.status === "Lapsed").length;
+  const activePolicies = records.filter((r) => r.status === "ACTIVE").length;
+  const maturedPolicies = records.filter((r) => r.status === "MATURED").length;
+  const lapsedPolicies = records.filter((r) => r.status === "LAPSED").length;
 
   // Pagination
   const totalPages = Math.ceil(records.length / itemsPerPage);
@@ -322,33 +323,45 @@ export default function ViewRecords() {
               <path d="M12 1C6.48 1 2 4.58 2 9v10c0 4.42 4.48 8 10 8s10-3.58 10-8V9c0-4.42-4.48-8-10-8zm0 2c4.41 0 8 2.69 8 6v10c0 3.31-3.59 6-8 6s-8-2.69-8-6V9c0-3.31 3.59-6 8-6zm3.5 9c.83 0 1.5.67 1.5 1.5S16.33 15 15.5 15 14 14.33 14 13.5s.67-1.5 1.5-1.5zm-7 0c.83 0 1.5.67 1.5 1.5S9.33 15 8.5 15 7 14.33 7 13.5 7.67 12 8.5 12z" />
             </svg>
           </div>
-          {sidebarOpen && <span className="font-bold text-lg">Dashboard</span>}
+          {sidebarOpen && <span className="font-bold text-lg">Menu</span>}
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
           <div
-            onClick={() => router.push("/dashboard")}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer"
+            onClick={() => router.push('/dashboard')}
+            className={pathname === '/dashboard' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
           >
             <Home size={20} />
             {sidebarOpen && <span>Dashboard</span>}
           </div>
-          <div className="flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer">
+          <div
+            onClick={() => router.push('/dashboard/new-policy')}
+            className={pathname === '/dashboard/new-policy' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+          >
             <FileText size={20} />
             {sidebarOpen && <span>Policies</span>}
           </div>
-          <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 rounded cursor-pointer">
+          <div
+            onClick={() => router.push('/dashboard/view-records')}
+            className={pathname === '/dashboard/view-records' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+          >
             <BarChart3 size={20} />
             {sidebarOpen && <span>Records</span>}
           </div>
-          <div className="flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer">
+          <div
+            onClick={() => router.push('/dashboard/maturity-list')}
+            className={pathname === '/dashboard/maturity-list' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+          >
             <Calendar size={20} />
             {sidebarOpen && <span>Maturity List</span>}
           </div>
-          <div className="flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer">
+          <div
+            onClick={() => router.push('/dashboard/update-policy')}
+            className={pathname === '/dashboard/update-policy' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+          >
             <Settings size={20} />
-            {sidebarOpen && <span>Settings</span>}
+            {sidebarOpen && <span>Update</span>}
           </div>
         </nav>
 

@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, LogOut, Home, FileText, BarChart3, Calendar, Settings, Search, ChevronDown } from 'lucide-react';
+import { apiCall } from '@/app/utils/api';
+import { usePathname } from 'next/navigation';
 
 interface User {
   username: string;
@@ -11,9 +13,16 @@ interface User {
 
 export default function Dashboard() {
   const router = useRouter();
+  const pathname = usePathname() || '';
   const [user, setUser] = useState<User | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalPolicies: 0,
+    activePolicies: 0,
+    maturedPolicies: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
@@ -23,8 +32,33 @@ export default function Dashboard() {
     } else {
       setUser(JSON.parse(userData));
       setLoading(false);
+      // Fetch statistics
+      fetchStats();
     }
   }, [router]);
+
+  const fetchStats = async () => {
+    try {
+      setStatsLoading(true);
+      const token = localStorage.getItem('authToken');
+      const result = await apiCall('/api/v1/policy/stats', {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (result) {
+        setStats({
+          totalPolicies: result.totalPolicies || 0,
+          activePolicies: result.activePolicies || 0,
+          maturedPolicies: result.maturedPolicies || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch statistics:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -46,36 +80,46 @@ export default function Dashboard() {
               <path d="M12 1C6.48 1 2 4.58 2 9v10c0 4.42 4.48 8 10 8s10-3.58 10-8V9c0-4.42-4.48-8-10-8zm0 2c4.41 0 8 2.69 8 6v10c0 3.31-3.59 6-8 6s-8-2.69-8-6V9c0-3.31 3.59-6 8-6zm3.5 9c.83 0 1.5.67 1.5 1.5S16.33 15 15.5 15 14 14.33 14 13.5s.67-1.5 1.5-1.5zm-7 0c.83 0 1.5.67 1.5 1.5S9.33 15 8.5 15 7 14.33 7 13.5 7.67 12 8.5 12z" />
             </svg>
           </div>
-          {sidebarOpen && <span className="font-bold text-lg">Dashboard</span>}
+          {sidebarOpen && <span className="font-bold text-lg">Menu</span>}
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
-          <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 rounded">
+          {/** Navigation items - highlight active based on pathname */}
+          <div
+            onClick={() => router.push('/dashboard')}
+            className={pathname === '/dashboard' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+          >
             <Home size={20} />
             {sidebarOpen && <span>Dashboard</span>}
           </div>
-          <div className="flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer">
+          <div
+            onClick={() => router.push('/dashboard/new-policy')}
+            className={pathname === '/dashboard/new-policy' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+          >
             <FileText size={20} />
             {sidebarOpen && <span>Policies</span>}
           </div>
-          <div 
+          <div
             onClick={() => router.push('/dashboard/view-records')}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer"
+            className={pathname === '/dashboard/view-records' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
           >
             <BarChart3 size={20} />
             {sidebarOpen && <span>Records</span>}
           </div>
-          <div 
+          <div
             onClick={() => router.push('/dashboard/maturity-list')}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer"
+            className={pathname === '/dashboard/maturity-list' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
           >
             <Calendar size={20} />
             {sidebarOpen && <span>Maturity List</span>}
           </div>
-          <div className="flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer">
+          <div
+            onClick={() => router.push('/dashboard/update-policy')}
+            className={pathname === '/dashboard/update-policy' ? 'flex items-center gap-3 px-4 py-3 bg-blue-600 rounded' : 'flex items-center gap-3 px-4 py-3 hover:bg-slate-600 rounded cursor-pointer'}
+          >
             <Settings size={20} />
-            {sidebarOpen && <span>Settings</span>}
+            {sidebarOpen && <span>Update</span>}
           </div>
         </nav>
 
@@ -159,14 +203,14 @@ export default function Dashboard() {
             {/* View Policy Records Card */}
             <button
               onClick={() => router.push('/dashboard/view-records')}
-              className="bg-blue-500 rounded-lg p-6 text-white shadow-lg hover:shadow-xl transition transform hover:scale-105 cursor-pointer text-left"
+              className="bg-purple-500 rounded-lg p-6 text-white shadow-lg hover:shadow-xl transition transform hover:scale-105 cursor-pointer text-left"
             >
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-2xl font-bold mb-2">View Policy Records</h2>
-                  <p className="text-blue-100">Search & Filter Records</p>
+                  <p className="text-purple-100">Search & Filter Records</p>
                 </div>
-                <div className="bg-blue-600 p-3 rounded-lg flex items-center justify-center">
+                <div className="bg-purple-600 p-3 rounded-lg flex items-center justify-center">
                   <div className="relative">
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -200,15 +244,15 @@ export default function Dashboard() {
             <div className="flex items-center justify-around">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                <span className="text-gray-700">Total Policies: <span className="font-bold text-blue-600">1,250</span></span>
+                <span className="text-gray-700">Total Policies: <span className="font-bold text-blue-600">{statsLoading ? '...' : stats.totalPolicies.toLocaleString()}</span></span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="text-gray-700">Active Policies: <span className="font-bold text-green-600">980</span></span>
+                <span className="text-gray-700">Active Policies: <span className="font-bold text-green-600">{statsLoading ? '...' : stats.activePolicies.toLocaleString()}</span></span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                <span className="text-gray-700">Matured Policies: <span className="font-bold text-orange-600">150</span></span>
+                <span className="text-gray-700">Matured Policies: <span className="font-bold text-orange-600">{statsLoading ? '...' : stats.maturedPolicies.toLocaleString()}</span></span>
               </div>
             </div>
           </div>
