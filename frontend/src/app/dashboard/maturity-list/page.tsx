@@ -8,6 +8,86 @@ import { usePathname } from 'next/navigation';
 
 type PolicyAny = Record<string, any>;
 
+const printStyles = `
+  @media print {
+    @page {
+      size: landscape;
+      margin: 5mm;
+    }
+    
+    html {
+      width: 100%;
+      height: 100%;
+    }
+    
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 5mm;
+      background: white;
+    }
+    
+    .flex { display: none !important; }
+    .flex-1 { display: block !important; overflow: visible !important; }
+    
+    .sidebar-print-hide,
+    .filters-print-hide,
+    .buttons-print-hide,
+    .pagination-print-hide,
+    .print-hide,
+    .hidden.md\\:block,
+    .hidden {
+      display: none !important;
+    }
+    
+    .print-table-container {
+      display: block !important;
+      visibility: visible !important;
+      position: relative !important;
+      width: 100% !important;
+      overflow: visible !important;
+    }
+    
+    .print-table-container h1 {
+      margin: 0 0 5px 0;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    
+    .print-table-container p {
+      margin: 0 0 8px 0;
+      font-size: 11px;
+      color: #666;
+    }
+    
+    .print-table-container table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9px;
+      page-break-inside: auto;
+    }
+    
+    .print-table-container tbody tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+    
+    .print-table-container th,
+    .print-table-container td {
+      border: 1px solid #333;
+      padding: 4px 6px;
+      text-align: left;
+    }
+    
+    .print-table-container th {
+      background-color: #e5e5e5;
+      font-weight: bold;
+      page-break-inside: avoid;
+    }
+  }
+`;
+
 export default function MaturityList() {
   const router = useRouter();
   const pathname = usePathname() || '';
@@ -193,22 +273,38 @@ export default function MaturityList() {
   };
 
   const handlePrint = () => {
-    // Hide elements that should not be printed
-    const printHides = document.querySelectorAll('.print-hide, .sidebar-print-hide, .filters-print-hide, .buttons-print-hide, .pagination-print-hide');
-    const originalDisplay: { element: Element; display: string }[] = [];
-    
-    printHides.forEach((element) => {
-      originalDisplay.push({ element, display: (element as HTMLElement).style.display });
-      (element as HTMLElement).style.display = 'none';
-    });
-    
-    // Trigger print
-    window.print();
-    
-    // Restore hidden elements
-    originalDisplay.forEach(({ element, display }) => {
-      (element as HTMLElement).style.display = display;
-    });
+    // Add landscape orientation instruction
+    const printWindows = window.open('', 'print-window');
+    if (printWindows) {
+      // Get the print table HTML
+      const printTableElement = document.querySelector('.print-table-container');
+      if (printTableElement) {
+        const printContent = printTableElement.outerHTML;
+        printWindows.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              @page { size: landscape; margin: 5mm; }
+              body { margin: 0; padding: 10mm; font-family: Arial, sans-serif; }
+              table { width: 100%; border-collapse: collapse; font-size: 9px; }
+              th, td { border: 1px solid #333; padding: 4px 6px; text-align: left; }
+              th { background-color: #e5e5e5; font-weight: bold; }
+              h1 { margin: 0 0 5px 0; font-size: 16px; }
+              p { margin: 0 0 8px 0; font-size: 11px; color: #666; }
+              tr { page-break-inside: avoid; }
+            </style>
+          </head>
+          <body>
+            ${printContent}
+          </body>
+          </html>
+        `);
+        printWindows.document.close();
+        printWindows.print();
+      }
+    }
   };
 
   const handleLogout = () => {
@@ -256,6 +352,15 @@ export default function MaturityList() {
     });
   };
 
+  useEffect(() => {
+    // Inject print styles
+    const style = document.createElement('style');
+    style.innerHTML = printStyles;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -422,6 +527,87 @@ export default function MaturityList() {
                           <td key={col} className={`px-6 py-3 text-gray-800 ${isAddressCol ? 'min-w-[250px]' : ''}`}>
                             {col.toLowerCase().includes('policy') ? (
                               <span className="text-blue-600 cursor-pointer hover:underline">{display}</span>
+                            ) : col.toLowerCase().includes('status') ? (
+                              <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded text-sm font-semibold">{display}</span>
+                            ) : (
+                              display
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Print-only table with all records and columns */}
+            <div className="print-table-container hidden">
+              <h1 className="text-2xl font-bold mb-4">Maturity List Report</h1>
+              <p className="text-sm text-gray-600 mb-4">Generated on {new Date().toLocaleDateString()}</p>
+              <table>
+                <thead>
+                  <tr>
+                    {(columns.length > 0 ? columns : (maturityPolicies[0] ? Object.keys(maturityPolicies[0]) : [])).map((col) => (
+                      <th key={col}>{formatHeader(col)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {maturityPolicies.map((policy, rowIdx) => (
+                    <tr key={policy.id ?? rowIdx}>
+                      {(columns.length > 0 ? columns : Object.keys(policy)).map((col) => {
+                        const raw = policy[col];
+                        let display = '';
+                        if (raw === null || raw === undefined) display = '';
+                        else if (typeof raw === 'object') display = JSON.stringify(raw);
+                        else if (typeof raw === 'number' && /amount|sum/i.test(col)) display = `₹ ${(raw / 100000).toFixed(2)} L`;
+                        else display = String(raw);
+
+                        return (
+                          <td key={col}>
+                            {col.toLowerCase().includes('policy') ? (
+                              <span className="text-blue-600">{display}</span>
+                            ) : col.toLowerCase().includes('status') ? (
+                              <span className="bg-emerald-100 text-emerald-800">{display}</span>
+                            ) : (
+                              display
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Original print-only table with filtered columns */}
+            <div className="print:block hidden overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-100 border-b border-gray-300">
+                  <tr>
+                    {getFilteredColumns(columns.length > 0 ? columns : (maturityPolicies[0] ? Object.keys(maturityPolicies[0]) : [])).map((col) => (
+                      <th key={col} className="px-6 py-3 text-left text-gray-700 font-semibold">{formatHeader(col)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {maturityPolicies.map((policy, rowIdx) => (
+                    <tr key={policy.id ?? rowIdx} className="border-b border-gray-200">
+                      {getFilteredColumns(columns.length > 0 ? columns : Object.keys(policy)).map((col) => {
+                        const raw = policy[col];
+                        let display = '';
+                        if (raw === null || raw === undefined) display = '';
+                        else if (typeof raw === 'object') display = JSON.stringify(raw);
+                        else if (typeof raw === 'number' && /amount|sum/i.test(col)) display = `₹ ${(raw / 100000).toFixed(2)} L`;
+                        else display = String(raw);
+
+                        const isAddressCol = col.toLowerCase().includes('address');
+                        return (
+                          <td key={col} className={`px-6 py-3 text-gray-800 ${isAddressCol ? 'min-w-[250px]' : ''}`}>
+                            {col.toLowerCase().includes('policy') ? (
+                              <span className="text-blue-600">{display}</span>
                             ) : col.toLowerCase().includes('status') ? (
                               <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded text-sm font-semibold">{display}</span>
                             ) : (
