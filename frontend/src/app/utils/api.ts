@@ -83,3 +83,90 @@ export const clearAuthToken = () => {
   localStorage.removeItem('authToken');
   localStorage.removeItem('user');
 };
+
+/**
+ * Download a binary file (blob) from the API and trigger a client-side download.
+ * Handles Authorization header and common HTTP errors similar to `apiCall`.
+ */
+export const downloadFile = async (
+  endpoint: string,
+  defaultFilename = 'download',
+  options: { method?: string; body?: any; headers?: HeadersInit } = {}
+) => {
+  const token = localStorage.getItem('authToken');
+
+  const headers = new Headers(options.headers);
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  // If sending JSON body, set Content-Type
+  const method = (options.method || 'GET').toUpperCase();
+  let body: BodyInit | undefined;
+  if (options.body != null) {
+    if (typeof options.body === 'string' || options.body instanceof Blob) {
+      body = options.body as BodyInit;
+    } else {
+      headers.set('Content-Type', 'application/json');
+      body = JSON.stringify(options.body);
+    }
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method,
+      headers,
+      body,
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+        throw new Error('Session expired. Please login again.');
+      }
+      if (response.status === 403) {
+        throw new Error('Access forbidden. Please check your permissions or try logging in again.');
+      }
+
+      let errorMessage = `API Error: ${response.status} ${response.statusText}`;
+      try {
+        const text = await response.text();
+        if (text) errorMessage = text;
+      } catch (e) {
+        // ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    const blob = await response.blob();
+
+    // Try to infer filename from content-disposition header
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = defaultFilename;
+    if (contentDisposition) {
+      const match = /filename\*?=([^;]+)/i.exec(contentDisposition);
+      if (match && match[1]) {
+        filename = match[1].replace(/UTF-8''/, '').replace(/"/g, '').trim();
+      }
+    }
+
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+
+    return true;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      console.error('Network error - Backend may not be running:', error);
+      throw new Error('Unable to connect to server. Please ensure the backend is running on http://localhost:8081');
+    }
+    throw error;
+  }
+};

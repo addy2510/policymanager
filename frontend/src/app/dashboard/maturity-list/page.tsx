@@ -3,18 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, ChevronDown, X, Home, FileText, BarChart3, Calendar, Settings, LogOut } from 'lucide-react';
-import { apiCall } from '../../utils/api';
+import { apiCall, downloadFile } from '../../utils/api';
 import { usePathname } from 'next/navigation';
 
-interface MaturityPolicy {
-  id: number;
-  policyNo: string;
-  customerName: string;
-  policyType: string;
-  maturityDate: string;
-  amount: number;
-  status: string;
-}
+type PolicyAny = Record<string, any>;
 
 export default function MaturityList() {
   const router = useRouter();
@@ -26,7 +18,9 @@ export default function MaturityList() {
   const [maturityToDate, setMaturityToDate] = useState('2026-01-31');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [maturityPolicies, setMaturityPolicies] = useState<MaturityPolicy[]>([]);
+  const [maturityPolicies, setMaturityPolicies] = useState<PolicyAny[]>([]);
+  const [allPolicies, setAllPolicies] = useState<PolicyAny[]>([]); // master copy for search/reset
+  const [columns, setColumns] = useState<string[]>([]);
   const itemsPerPage = 10;
   const totalPages = Math.ceil(maturityPolicies.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -85,7 +79,13 @@ export default function MaturityList() {
           ...policy
         }));
         setMaturityPolicies(mappedPolicies);
-        alert(`Successfully fetched ${mappedPolicies.length} policies`);
+        setAllPolicies(mappedPolicies);
+        // compute columns from union of keys
+        const cols = Array.from(mappedPolicies.reduce((acc: Set<string>, p: any) => {
+          Object.keys(p).forEach(k => acc.add(k));
+          return acc;
+        }, new Set<string>())) as string[];
+        setColumns(cols);
       } else if (Array.isArray(response)) {
         // If response is directly an array
         const mappedPolicies = response.map((policy: any) => ({
@@ -99,15 +99,25 @@ export default function MaturityList() {
           ...policy
         }));
         setMaturityPolicies(mappedPolicies);
+        setAllPolicies(mappedPolicies);
+        const cols = Array.from(mappedPolicies.reduce((acc: Set<string>, p: any) => {
+          Object.keys(p).forEach(k => acc.add(k));
+          return acc;
+        }, new Set<string>())) as string[];
+        setColumns(cols);
       } else {
         alert('No policies found for the selected date range.');
         setMaturityPolicies([]);
+        setAllPolicies([]);
+        setColumns([]);
       }
       setCurrentPage(1);
     } catch (error: any) {
       console.error('Error fetching maturity records:', error);
       alert(`Error fetching records: ${error.message}`);
       setMaturityPolicies([]);
+      setAllPolicies([]);
+      setColumns([]);
     }
   };
 
@@ -115,32 +125,39 @@ export default function MaturityList() {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
     if (term) {
-      const filtered = maturityPolicies.filter(policy =>
-        policy.policyNo.toLowerCase().includes(term) ||
-        policy.customerName.toLowerCase().includes(term)
+      const filtered = allPolicies.filter(policy =>
+        Object.values(policy)
+          .filter(v => v !== null && v !== undefined)
+          .map(v => (typeof v === 'object' ? JSON.stringify(v) : String(v)).toLowerCase())
+          .join(' ')
+          .includes(term)
       );
       setMaturityPolicies(filtered);
     } else {
-      setMaturityPolicies([]);
+      setMaturityPolicies(allPolicies.slice());
     }
     setCurrentPage(1);
   };
 
   const handleDownloadCSV = () => {
-    const headers = ['Policy No', 'Customer Name', 'Policy Type', 'Maturity Date', 'Amount', 'Status'];
-    const rows = maturityPolicies.map(p => [
-      p.policyNo,
-      p.customerName,
-      p.policyType,
-      p.maturityDate,
-      `₹ ${(p.amount / 100000).toFixed(2)}`,
-      p.status
-    ]);
+    // use dynamic columns (fallback to keys of first record)
+    const cols = getFilteredColumns(columns.length > 0 ? columns : (maturityPolicies[0] ? Object.keys(maturityPolicies[0]) : []));
+    const headers = cols;
+    const rows = maturityPolicies.map(p =>
+      cols.map((c) => {
+        const v = p[c];
+        if (v === null || v === undefined) return '';
+        if (typeof v === 'object') return JSON.stringify(v);
+        if (typeof v === 'number' && /amount|sum/i.test(c)) return `₹ ${(v / 100000).toFixed(2)}`;
+        return String(v);
+      })
+    );
+
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.join(','))
+      ...rows.map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(','))
     ].join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -150,8 +167,29 @@ export default function MaturityList() {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleDownloadExcel = () => {
-    alert('Excel download feature will be integrated with backend API');
+  const handleDownloadExcel = async () => {
+    try {
+      // Ensure we have records to download; if not, fetch them first
+      if (maturityPolicies.length === 0) {
+        await handleFetchRecords();
+      }
+
+      if (maturityPolicies.length === 0) {
+        alert('No policies available to download. Fetch records first.');
+        return;
+      }
+
+      // Use all data fields for Excel export
+      const requests = maturityPolicies.map((p) => p);
+
+      await downloadFile('/api/v1/policy/download-all-policies-excel', 'maturity-list.xlsx', {
+        method: 'POST',
+        body: requests,
+      });
+    } catch (error: any) {
+      console.error('Error downloading Excel:', error);
+      alert(`Error downloading Excel: ${error.message || JSON.stringify(error)}`);
+    }
   };
 
   const handlePrint = () => {
@@ -178,7 +216,46 @@ export default function MaturityList() {
     router.push('/');
   };
 
-  const totalAmount = maturityPolicies.reduce((sum, policy) => sum + policy.amount, 0);
+  const totalAmount = maturityPolicies.reduce((sum, policy) => {
+    const amountKeys = ['amount', 'sumAssured', 'sum', 'sum_assured', 'sumassured'];
+    let val: number | undefined;
+    for (const k of amountKeys) {
+      if (typeof policy[k] === 'number') {
+        val = policy[k];
+        break;
+      }
+    }
+    return sum + (typeof val === 'number' ? val : 0);
+  }, 0);
+
+  const formatHeader = (key: string) => {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim();
+  };
+
+  const getFilteredColumns = (cols: string[]) => {
+    // Exclude 'id' and duplicate columns
+    const duplicates: { [key: string]: string[] } = {
+      policyNo: ['policyNumber', 'policynumber'],
+      customerName: ['personName', 'personname'],
+      amount: ['sumAssured', 'sumasured', 'sum'],
+    };
+
+    return cols.filter((col) => {
+      if (col.toLowerCase() === 'id') return false;
+      // Check if this column is a duplicate of a primary column
+      for (const [primary, dupes] of Object.entries(duplicates)) {
+        if (dupes.some(d => d.toLowerCase() === col.toLowerCase()) && cols.includes(primary)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  };
+
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -243,7 +320,7 @@ export default function MaturityList() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col w-full min-w-0">
         {/* Header */}
         <div className="bg-white shadow px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">Maturity List</h1>
@@ -255,13 +332,13 @@ export default function MaturityList() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-auto p-8">
+        <div className="flex-1 overflow-y-auto p-8 w-full min-w-0">
           <p className="text-gray-600 mb-6 print-hide">View and download policies maturing on a selected date</p>
 
           {/* Date and Action Buttons */}
-          <div className="buttons-print-hide bg-white rounded-lg shadow p-6 mb-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex items-center gap-2">
+          <div className="buttons-print-hide bg-white rounded-lg shadow p-6 mb-6 overflow-x-auto">
+            <div className="flex items-center gap-4 mb-4 min-w-max">
+              <div className="flex items-center gap-2 whitespace-nowrap">
                 <label className="font-semibold text-gray-700">Maturity From:</label>
                 <input
                   type="date"
@@ -270,7 +347,7 @@ export default function MaturityList() {
                   className="border border-gray-300 rounded px-3 py-2 text-gray-800"
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 whitespace-nowrap">
                 <label className="font-semibold text-gray-700">Maturity To:</label>
                 <input
                   type="date"
@@ -317,38 +394,82 @@ export default function MaturityList() {
             </div>
           </div>
 
-          {/* Table */}
+          {/* Table / Mobile list */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-100 border-b border-gray-300">
-                <tr>
-                  <th className="px-6 py-3 text-left text-gray-700 font-semibold">Policy No</th>
-                  <th className="px-6 py-3 text-left text-gray-700 font-semibold">Customer Name</th>
-                  <th className="px-6 py-3 text-left text-gray-700 font-semibold">Policy Type</th>
-                  <th className="px-6 py-3 text-left text-gray-700 font-semibold">Maturity Date</th>
-                  <th className="px-6 py-3 text-left text-gray-700 font-semibold">Amount</th>
-                  <th className="px-6 py-3 text-left text-gray-700 font-semibold">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedPolicies.map((policy) => (
-                  <tr key={policy.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="px-6 py-3 text-gray-800">
-                      <span className="text-blue-600 cursor-pointer hover:underline">{policy.policyNo}</span>
-                    </td>
-                    <td className="px-6 py-3 text-gray-800">{policy.customerName}</td>
-                    <td className="px-6 py-3 text-gray-800">{policy.policyType}</td>
-                    <td className="px-6 py-3 text-gray-800">{policy.maturityDate}</td>
-                    <td className="px-6 py-3 text-gray-800">₹ {(policy.amount / 100000).toFixed(2)} L</td>
-                    <td className="px-6 py-3">
-                      <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded text-sm font-semibold">
-                        {policy.status}
-                      </span>
-                    </td>
+            {/* Desktop table (md and up) */}
+            <div className="hidden md:block w-full overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-100 border-b border-gray-300">
+                  <tr>
+                    {getFilteredColumns(columns.length > 0 ? columns : (paginatedPolicies[0] ? Object.keys(paginatedPolicies[0]) : [])).map((col) => (
+                      <th key={col} className="px-6 py-3 text-left text-gray-700 font-semibold">{formatHeader(col)}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedPolicies.map((policy, rowIdx) => (
+                    <tr key={policy.id ?? rowIdx} className="border-b border-gray-200 hover:bg-gray-50">
+                      {getFilteredColumns(columns.length > 0 ? columns : Object.keys(policy)).map((col) => {
+                        const raw = policy[col];
+                        let display = '';
+                        if (raw === null || raw === undefined) display = '';
+                        else if (typeof raw === 'object') display = JSON.stringify(raw);
+                        else if (typeof raw === 'number' && /amount|sum/i.test(col)) display = `₹ ${(raw / 100000).toFixed(2)} L`;
+                        else display = String(raw);
+
+                        const isAddressCol = col.toLowerCase().includes('address');
+                        return (
+                          <td key={col} className={`px-6 py-3 text-gray-800 ${isAddressCol ? 'min-w-[250px]' : ''}`}>
+                            {col.toLowerCase().includes('policy') ? (
+                              <span className="text-blue-600 cursor-pointer hover:underline">{display}</span>
+                            ) : col.toLowerCase().includes('status') ? (
+                              <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded text-sm font-semibold">{display}</span>
+                            ) : (
+                              display
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards (sm screens) */}
+            <div className="md:hidden p-4 space-y-3">
+              {paginatedPolicies.map((policy, idx) => (
+                <div key={policy.id ?? idx} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-sm text-gray-500">{formatHeader(columns[0] ?? 'Policy')}</div>
+                      <div className="text-lg font-semibold text-blue-600">{policy.policyNo ?? policy.policyNumber ?? ''}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-gray-500">{formatHeader('maturityDate')}</div>
+                      <div className="font-semibold">{policy.maturityDate ?? ''}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                    {getFilteredColumns(columns.length > 0 ? columns : Object.keys(policy)).map((col) => {
+                      const raw = policy[col];
+                      let display = '';
+                      if (raw === null || raw === undefined) display = '';
+                      else if (typeof raw === 'object') display = JSON.stringify(raw);
+                      else if (typeof raw === 'number' && /amount|sum/i.test(col)) display = `₹ ${(raw / 100000).toFixed(2)} L`;
+                      else display = String(raw);
+
+                      return (
+                        <div key={col} className="flex flex-col">
+                          <span className="text-xs text-gray-500">{formatHeader(col)}</span>
+                          <span className={`text-sm ${col.toLowerCase().includes('status') ? 'font-semibold' : ''}`}>{display}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
 
             {/* Pagination */}
             <div className="pagination-print-hide px-6 py-4 border-t border-gray-200 flex items-center justify-between">
