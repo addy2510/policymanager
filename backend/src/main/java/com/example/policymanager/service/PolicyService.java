@@ -133,23 +133,22 @@ public class PolicyService {
             String groupCode, Pageable pageable) {
 
         if (policyNumber != null) {
-            Optional<UserPolicyDetails> policy = policyRepository.findById(Long.valueOf(policyNumber));
-
-            List<PolicyResponse> content = policy
-                    .map(p -> List.of(mapToResponse(p)))
-                    .orElse(List.of());
-            return new PageImpl<>(content, pageable, content.size());
+            // prefix search on policy number (numeric) by casting to string in repository
+            Page<UserPolicyDetails> page = policyRepository.findByPolicyNoStartingWith(policyNumber, pageable);
+            return page.map(this::mapToResponse);
         }
 
         if (personName != null) {
+            // allow prefix search on person name
             Page<UserPolicyDetails> page = policyRepository
-                    .findByPolicyHolderContainingIgnoreCase(personName, pageable);
+                    .findByPolicyHolderStartingWithIgnoreCase(personName, pageable);
             return page.map(this::mapToResponse);
         }
 
         if (groupCode != null) {
+            // allow prefix search on group code
             Page<UserPolicyDetails> page = policyRepository
-                    .findByGroupCode(groupCode, pageable);
+                    .findByGroupCodeStartingWithIgnoreCase(groupCode, pageable);
             return page.map(this::mapToResponse);
         }
 

@@ -15,6 +15,13 @@ import org.springframework.http.ResponseEntity;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.web.multipart.MultipartFile;
+import com.example.policymanager.beans.ArtifactResponse;
+import com.example.policymanager.service.ArtifactService;
 
 @RestController
 @RequestMapping("/api/v1/policy")
@@ -22,6 +29,9 @@ public class PolicyController {
 
     @Autowired
     private PolicyService policyService;
+
+    @Autowired
+    private ArtifactService artifactService;
 
     @PostMapping("/createPolicy")
     public PolicyResponse createPolicy(@RequestBody PolicyRequest request) {
@@ -84,5 +94,36 @@ public class PolicyController {
         headers.set(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
         return new ResponseEntity<>(excelFile.toByteArray(), headers, HttpStatus.OK);
+    }
+
+    @PostMapping("/{policyNumber}/upload-artifacts")
+    public ResponseEntity<ArtifactResponse> uploadArtifact(
+            @PathVariable String policyNumber,
+            @RequestParam("file") MultipartFile file) throws IOException {
+
+        ArtifactResponse saved = artifactService.storeArtifact(Long.valueOf(policyNumber), file);
+        return new ResponseEntity<>(saved, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{policyNumber}/list-artifacts")
+    public Page<ArtifactResponse> listArtifacts(@PathVariable String policyNumber,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return artifactService.listArtifacts(Long.valueOf(policyNumber), pageable);
+    }
+
+    @GetMapping("/{policyNumber}/download-artifacts/{id}")
+    public ResponseEntity<Resource> downloadArtifact(@PathVariable String policyNumber, @PathVariable Long id)
+            throws IOException {
+        Path p = artifactService.getArtifactPath(id);
+        if (p == null || !Files.exists(p)) {
+            return ResponseEntity.notFound().build();
+        }
+        byte[] data = Files.readAllBytes(p);
+        String contentType = Files.probeContentType(p);
+        ByteArrayResource resource = new ByteArrayResource(data);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + p.getFileName().toString() + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, contentType != null ? contentType : "application/octet-stream")
+                .body(resource);
     }
 }
