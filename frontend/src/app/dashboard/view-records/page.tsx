@@ -574,28 +574,28 @@ export default function ViewRecords() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-100 border-b">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 w-32">
                       Policy No
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 flex-1">
                       Customer Name
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 w-28">
                       Group Code
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 w-40">
                       Policy Type
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 w-28">
                       Start Date
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700 w-24">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700 w-20">
                       Documents
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700 w-20">
                       Actions
                     </th>
                   </tr>
@@ -603,7 +603,7 @@ export default function ViewRecords() {
                 <tbody>
                   {paginatedRecords.map((record) => (
                     <tr key={record.id} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-3 text-gray-800">
+                      <td className="px-4 py-3 text-gray-800 font-semibold">
                         {record.policyNo || record.policyNumber || "N/A"}
                       </td>
                       <td className="px-4 py-3 text-gray-800">
@@ -618,22 +618,23 @@ export default function ViewRecords() {
                       <td className="px-4 py-3 text-gray-800">
                         {record.startDate || record.maturityDate || "N/A"}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(record.status || "Active")}`}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getStatusColor(record.status || "Active")}`}
                         >
                           {record.status || "Active"}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => router.push(`/dashboard/upload-docs/${record.policyNo || record.policyNumber}`)}
-                          className="text-blue-600 hover:text-blue-800 font-semibold mr-4"
+                          className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center justify-center"
                           title="View Documents"
                         >
                           <Folder size={20} />
                         </button>
-
+                      </td>
+                      <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => {
                             setSelectedPolicy(record);

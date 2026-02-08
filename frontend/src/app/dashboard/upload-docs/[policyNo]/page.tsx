@@ -18,6 +18,9 @@ export default function UploadDocsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -110,8 +113,59 @@ export default function UploadDocsPage() {
     }
   };
 
-  const handleUpload = () => {
-    alert('Upload not implemented in this demo');
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) {
+      setUploadError('Please select at least one file to upload');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError('');
+    setUploadSuccess('');
+
+    try {
+      const formData = new FormData();
+      
+      // Add all selected files to formData
+      selectedFiles.forEach((file, index) => {
+        formData.append('files', file);
+      });
+
+      // Add policyNo to the request
+      formData.append('policyNo', policyNo);
+
+      // Make the POST request
+      const response = await apiCall('/api/v1/policy/upload-artifacts', {
+        method: 'POST',
+        body: formData,
+      });
+
+      console.log('Upload response:', response);
+      setUploadSuccess('Files uploaded successfully!');
+      
+      // Clear selected files
+      setSelectedFiles([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      // Optionally refresh the documents list
+      try {
+        const d = await apiCall(`/api/v1/policy/${policyNo}/documents`, { method: 'GET' });
+        if (Array.isArray(d)) setDocs(d);
+        else if (d && Array.isArray(d.content)) setDocs(d.content);
+      } catch (e) {
+        console.warn('Failed to refresh documents:', e);
+      }
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setUploadSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setUploadError(err?.message || 'Failed to upload files');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleRemoveFile = (idx: number) => {
@@ -220,9 +274,21 @@ export default function UploadDocsPage() {
                   ))}
                 </div>
               )}
+              {uploadError && (
+                <div className="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                  {uploadError}
+                </div>
+              )}
+              {uploadSuccess && (
+                <div className="mt-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                  {uploadSuccess}
+                </div>
+              )}
               <div className="flex justify-end gap-2 mt-4">
-                <button onClick={() => setSelectedFiles([])} className="px-4 py-2 rounded border bg-gray-100 hover:bg-gray-200">Cancel</button>
-                <button onClick={handleUpload} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Upload Files</button>
+                <button onClick={() => setSelectedFiles([])} disabled={uploading} className="px-4 py-2 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed">Cancel</button>
+                <button onClick={handleUpload} disabled={uploading || selectedFiles.length === 0} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed">
+                  {uploading ? 'Uploading...' : 'Upload Files'}
+                </button>
               </div>
             </div>
             <div className="bg-white rounded-lg shadow p-6 text-black">
