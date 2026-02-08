@@ -14,8 +14,8 @@ export default function UploadDocsPage() {
   const policyNo = params?.policyNo ? String(params.policyNo) : '';
   const { handleSessionExpiry } = useSession();
 
-  // File size limit: 1MB (1048576 bytes)
-  const MAX_FILE_SIZE = 1048576;
+  // File size limit: 12MB (12582912 bytes)
+  const MAX_FILE_SIZE = 12582912;
 
   const [policy, setPolicy] = useState<any>(null);
   const [docs, setDocs] = useState<any[]>([]);
