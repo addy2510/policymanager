@@ -3,6 +3,7 @@ package com.example.policymanager.controller;
 import com.example.policymanager.beans.PolicyRequest;
 import com.example.policymanager.beans.PolicyResponse;
 import com.example.policymanager.beans.PolicyStatsResponse;
+import com.example.policymanager.beans.DeleteArtifactRequest;
 import com.example.policymanager.service.PolicyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -128,9 +129,9 @@ public class PolicyController {
     }
 
     @DeleteMapping("/{policyNumber}/delete-artifact")
-    public ResponseEntity<Void> deleteArtifact(@PathVariable String policyNumber, @RequestParam("id") Long id)
+    public ResponseEntity<Void> deleteArtifact(@PathVariable String policyNumber, @RequestBody DeleteArtifactRequest request)
             throws IOException {
-        artifactService.deleteArtifact(id, Long.valueOf(policyNumber));
+        artifactService.deleteArtifact(request.getArtifactId(), Long.valueOf(policyNumber));
         return ResponseEntity.noContent().build();
     }
 }

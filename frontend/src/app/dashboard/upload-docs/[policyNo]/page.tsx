@@ -303,8 +303,12 @@ export default function UploadDocsPage() {
 
     try {
       console.log('Deleting document:', { artifactId, fileName, policyNo });
-      await apiCall(`/api/v1/policy/${policyNo}/delete-artifact?artifactId=${artifactId}`, {
+      await apiCall(`/api/v1/policy/${policyNo}/delete-artifact`, {
         method: 'DELETE',
+        body: JSON.stringify({ artifactId }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       console.log('Document deleted successfully');
