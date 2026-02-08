@@ -14,6 +14,9 @@ export default function UploadDocsPage() {
   const policyNo = params?.policyNo ? String(params.policyNo) : '';
   const { handleSessionExpiry } = useSession();
 
+  // File size limit: 1MB (1048576 bytes)
+  const MAX_FILE_SIZE = 1048576;
+
   const [policy, setPolicy] = useState<any>(null);
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -149,20 +152,59 @@ export default function UploadDocsPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setSelectedFiles(Array.from(e.target.files));
+      const files = Array.from(e.target.files);
+      const validationError = validateFiles(files);
+      
+      if (validationError) {
+        setUploadError(validationError);
+        setSelectedFiles([]);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      } else {
+        setUploadError('');
+        setSelectedFiles(files);
+      }
     }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files) {
-      setSelectedFiles(Array.from(e.dataTransfer.files));
+      const files = Array.from(e.dataTransfer.files);
+      const validationError = validateFiles(files);
+      
+      if (validationError) {
+        setUploadError(validationError);
+        setSelectedFiles([]);
+      } else {
+        setUploadError('');
+        setSelectedFiles(files);
+      }
     }
+  };
+
+  const validateFiles = (files: File[]): string => {
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(1);
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        return `File "${file.name}" (${fileSizeMB}MB) exceeds the maximum allowed size of ${maxSizeMB}MB`;
+      }
+    }
+    return '';
   };
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0) {
       setUploadError('Please select at least one file to upload');
+      return;
+    }
+
+    // Validate file sizes before upload
+    const validationError = validateFiles(selectedFiles);
+    if (validationError) {
+      setUploadError(validationError);
       return;
     }
 
