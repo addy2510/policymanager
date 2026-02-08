@@ -24,6 +24,8 @@ export default function UploadDocsPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ artifactId: string | number; fileName: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -247,6 +249,41 @@ export default function UploadDocsPage() {
     }
   };
 
+  const handleDeleteDocument = (artifactId: string | number, fileName: string) => {
+    setDeleteConfirm({ artifactId, fileName });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+
+    const { artifactId, fileName } = deleteConfirm;
+    setDeleting(true);
+
+    try {
+      console.log('Deleting document:', { artifactId, fileName, policyNo });
+      await apiCall(`/api/v1/policy/${policyNo}/delete-artifact?artifactId=${artifactId}`, {
+        method: 'DELETE',
+      });
+
+      console.log('Document deleted successfully');
+      
+      // Refresh the documents list
+      await fetchDocuments();
+      
+      setDeleteConfirm(null);
+    } catch (err: any) {
+      if (err instanceof SessionExpiredError) {
+        console.log('Session expired, redirecting to login...');
+        handleSessionExpiry();
+      } else {
+        console.error('Delete error:', err);
+        alert('Failed to delete document: ' + (err?.message || 'Unknown error'));
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className={styles.root}>
       {/* Sidebar */}
@@ -398,7 +435,7 @@ export default function UploadDocsPage() {
                             <td className="px-4 py-2">{d.uploadedAt ? new Date(d.uploadedAt).toLocaleString() : ''}</td>
                             <td className="px-4 py-2 flex gap-2">
                               <button onClick={() => handleDownloadDocument(d.id, d.fileName || d.name || 'document')} className="text-blue-600 hover:text-blue-800" title="Download"><Download size={18} /></button>
-                              <button className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
+                              <button onClick={() => handleDeleteDocument(d.id, d.fileName || d.name || 'document')} className="text-red-500 hover:text-red-700" title="Delete"><Trash2 size={18} /></button>
                             </td>
                           </tr>
                         ))
@@ -411,6 +448,45 @@ export default function UploadDocsPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4 pointer-events-auto border border-gray-200">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="bg-red-100 p-3 rounded-full">
+                <Trash2 size={24} className="text-red-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900">Delete Document</h3>
+            </div>
+            <p className="text-gray-700 mb-2 leading-relaxed">
+              Are you sure you want to delete this document?
+            </p>
+            <p className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6 font-semibold break-words">
+              {deleteConfirm.fileName}
+            </p>
+            <p className="text-sm text-gray-600 mb-6">
+              This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+                className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="px-6 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
