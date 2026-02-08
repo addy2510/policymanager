@@ -126,4 +126,11 @@ public class PolicyController {
                 .header(HttpHeaders.CONTENT_TYPE, contentType != null ? contentType : "application/octet-stream")
                 .body(resource);
     }
+
+    @DeleteMapping("/{policyNumber}/delete-artifact")
+    public ResponseEntity<Void> deleteArtifact(@PathVariable String policyNumber, @RequestParam("id") Long id)
+            throws IOException {
+        artifactService.deleteArtifact(id, Long.valueOf(policyNumber));
+        return ResponseEntity.noContent().build();
+    }
 }

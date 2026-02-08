@@ -74,6 +74,25 @@ public class ArtifactService {
                 .orElse(null);
     }
 
+    public void deleteArtifact(Long id, Long policyNo) throws IOException {
+        UserPolicyArtifact a = artifactRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Artifact not found"));
+
+        if (!a.getPolicyNo().equals(policyNo)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Artifact does not belong to the policy");
+        }
+
+        Path p = Path.of(a.getFilePath());
+        try {
+            Files.deleteIfExists(p);
+        } catch (IOException e) {
+            // propagate as server error
+            throw new IOException("Failed to delete artifact file", e);
+        }
+
+        artifactRepository.deleteById(id);
+    }
+
     private void validateContentType(String contentType) {
         if (contentType == null) {
             throw new IllegalArgumentException("Unsupported file type");
