@@ -11,6 +11,7 @@ import {
   Calendar,
   Settings,
   Search,
+  Folder,
 } from "lucide-react";
 import { apiCall } from "@/app/utils/api";
 
@@ -93,7 +94,7 @@ export default function ViewRecords() {
           customerName: record.personName || record.customerName || "",
           personName: record.personName,
           groupCode: record.groupCode || "",
-          policyType: record.policyType || "",
+          policyType: record.policyType || record.product || "",
           startDate: record.startDate || "",
           maturityDate: record.maturityDate || "",
           status: record.status || "",
@@ -177,7 +178,7 @@ export default function ViewRecords() {
         customerName: record.personName || record.customerName || "",
         personName: record.personName,
         groupCode: record.groupCode || "",
-        policyType: record.policyType || "",
+        policyType: record.policyType || record.product || "",
         startDate: record.startDate || "",
         maturityDate: record.maturityDate || "",
         status: record.status || "",
@@ -259,7 +260,7 @@ export default function ViewRecords() {
         customerName: record.personName || record.customerName || "",
         personName: record.personName,
         groupCode: record.groupCode || "",
-        policyType: record.policyType || "",
+        policyType: record.policyType || record.product || "",
         startDate: record.startDate || "",
         maturityDate: record.maturityDate || "",
         status: record.status || "",
@@ -592,6 +593,9 @@ export default function ViewRecords() {
                       Status
                     </th>
                     <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                      Documents
+                    </th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700">
                       Actions
                     </th>
                   </tr>
@@ -609,7 +613,7 @@ export default function ViewRecords() {
                         {record.groupCode || "N/A"}
                       </td>
                       <td className="px-4 py-3 text-gray-800">
-                        {record.policyType || "N/A"}
+                        {record.policyType || record.product || "N/A"}
                       </td>
                       <td className="px-4 py-3 text-gray-800">
                         {record.startDate || record.maturityDate || "N/A"}
@@ -622,6 +626,14 @@ export default function ViewRecords() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
+                        <button
+                          onClick={() => router.push(`/dashboard/upload-docs/${record.policyNo || record.policyNumber}`)}
+                          className="text-blue-600 hover:text-blue-800 font-semibold mr-4"
+                          title="View Documents"
+                        >
+                          <Folder size={20} />
+                        </button>
+
                         <button
                           onClick={() => {
                             setSelectedPolicy(record);
