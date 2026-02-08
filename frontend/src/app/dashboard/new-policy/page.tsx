@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, ChevronDown, X, Home, FileText, BarChart3, Calendar, Settings, LogOut } from 'lucide-react';
-import { apiCall } from '@/app/utils/api';
+import { apiCall, SessionExpiredError } from '@/app/utils/api';
 import { usePathname } from 'next/navigation';
+import { useSession } from '@/app/context/SessionContext';
 
 export default function NewPolicy() {
   const router = useRouter();
+  const { handleSessionExpiry } = useSession();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname() || '';
@@ -130,8 +132,13 @@ export default function NewPolicy() {
         playNotificationSound();
         setShowSuccessModal(true);
       } catch (err) {
-        console.error('Error creating policy:', err);
-        setApiError(err instanceof Error ? err.message : 'Failed to create policy');
+        if (err instanceof SessionExpiredError) {
+          console.log('Session expired, redirecting to login...');
+          handleSessionExpiry();
+        } else {
+          console.error('Error creating policy:', err);
+          setApiError(err instanceof Error ? err.message : 'Failed to create policy');
+        }
       } finally {
         setLoading(false);
       }

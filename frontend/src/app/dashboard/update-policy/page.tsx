@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Menu, LogOut, Home, FileText, BarChart3, Calendar, Settings, AlertCircle, X, ChevronDown, Edit } from 'lucide-react';
-import { apiCall } from '@/app/utils/api';
+import { apiCall, SessionExpiredError } from '@/app/utils/api';
+import { useSession } from '@/app/context/SessionContext';
 
 interface PolicyDetails {
   policyNo: string;
@@ -48,6 +49,7 @@ interface User {
 export default function UpdatePolicy() {
   const router = useRouter();
   const pathname = usePathname() || '';
+  const { handleSessionExpiry } = useSession();
   const [user, setUser] = useState<User | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   useEffect(() => {
@@ -164,8 +166,13 @@ export default function UpdatePolicy() {
 
       setShowDetails(true);
     } catch (err) {
-      console.error('Search error:', err);
-      alert('Failed to search policy. Check console for details.');
+      if (err instanceof SessionExpiredError) {
+        console.log('Session expired, redirecting to login...');
+        handleSessionExpiry();
+      } else {
+        console.error('Search error:', err);
+        alert('Failed to search policy. Check console for details.');
+      }
     }
   };
 
@@ -341,14 +348,24 @@ export default function UpdatePolicy() {
           }));
         }
       } catch (refetchError) {
-        console.error('Failed to refetch policy:', refetchError);
+        if (refetchError instanceof SessionExpiredError) {
+          console.log('Session expired, redirecting to login...');
+          handleSessionExpiry();
+        } else {
+          console.error('Failed to refetch policy:', refetchError);
+        }
       }
 
       // Show success modal
       setShowSuccessModal(true);
     } catch (err) {
-      console.error('Update error:', err);
-      alert(err instanceof Error ? err.message : 'Failed to update policy');
+      if (err instanceof SessionExpiredError) {
+        console.log('Session expired, redirecting to login...');
+        handleSessionExpiry();
+      } else {
+        console.error('Update error:', err);
+        alert(err instanceof Error ? err.message : 'Failed to update policy');
+      }
     }
   };
 

@@ -1,0 +1,113 @@
+.root {
+  display: flex;
+  height: 100vh;
+  background-color: #f3f4f6; /* gray-100 */
+}
+
+.sidebar {
+  background-color: #0f172a; /* slate-900/700-ish */
+  color: #ffffff;
+  transition: all 300ms ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(148,163,184,0.3);
+}
+
+.nav {
+  flex: 1 1 auto;
+  padding: 1rem;
+}
+
+.main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb; /* gray-200 */
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pageContent {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 1.5rem;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: #000000;
+}
+
+.dropzone {
+  border: 2px dashed #60a5fa; /* blue-400 */
+  border-radius: 0.5rem;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff; /* blue-50 */
+  cursor: pointer;
+}
+
+.selectedFiles {
+  margin-top: 1rem;
+  border-radius: 0.5rem;
+  background: #f9fafb; /* gray-50 */
+  border: 1px solid rgba(0,0,0,0.03);
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.uploadButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.docsCard {
+  background: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  padding: 1.5rem;
+}
+
+/* Ensure good contrast inside documents card */
+.docsCard,
+.docsCard table,
+.docsCard th,
+.docsCard td,
+.docsCard h3 {
+  color: #0f172a; /* slate-900 - darker text for readability */
+}
+
+/* Make action icons more visible */
+.docsCard button,
+.docsCard a {
+  opacity: 1;
+}

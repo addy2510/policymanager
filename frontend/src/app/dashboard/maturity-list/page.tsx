@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, ChevronDown, X, Home, FileText, BarChart3, Calendar, Settings, LogOut } from 'lucide-react';
-import { apiCall, downloadFile } from '../../utils/api';
+import { apiCall, downloadFile, SessionExpiredError } from '../../utils/api';
 import { usePathname } from 'next/navigation';
+import { useSession } from '@/app/context/SessionContext';
 
 type PolicyAny = Record<string, any>;
 
@@ -91,6 +92,7 @@ const printStyles = `
 export default function MaturityList() {
   const router = useRouter();
   const pathname = usePathname() || '';
+  const { handleSessionExpiry } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [userName, setUserName] = useState('Admin');
   const [selectedDate, setSelectedDate] = useState('2026-01-16');
@@ -193,11 +195,16 @@ export default function MaturityList() {
       }
       setCurrentPage(1);
     } catch (error: any) {
-      console.error('Error fetching maturity records:', error);
-      alert(`Error fetching records: ${error.message}`);
-      setMaturityPolicies([]);
-      setAllPolicies([]);
-      setColumns([]);
+      if (error instanceof SessionExpiredError) {
+        console.log('Session expired, redirecting to login...');
+        handleSessionExpiry();
+      } else {
+        console.error('Error fetching maturity records:', error);
+        alert(`Error fetching records: ${error.message}`);
+        setMaturityPolicies([]);
+        setAllPolicies([]);
+        setColumns([]);
+      }
     }
   };
 

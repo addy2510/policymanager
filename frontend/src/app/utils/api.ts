@@ -4,6 +4,14 @@
 
 const API_BASE_URL = 'http://localhost:8081';
 
+// Custom error class for session expiry
+export class SessionExpiredError extends Error {
+  constructor(message: string = 'Session expired. Please login again.') {
+    super(message);
+    this.name = 'SessionExpiredError';
+  }
+}
+
 export const apiCall = async (
   endpoint: string,
   options: RequestInit = {}
@@ -17,7 +25,12 @@ export const apiCall = async (
   });
   
   const headers = new Headers(options.headers);
-  headers.set('Content-Type', 'application/json');
+  
+  // Only set Content-Type for non-FormData requests
+  // For FormData, let the browser set it automatically with the proper boundary
+  if (!(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
 
   // Add token to Authorization header if it exists
   if (token) {
@@ -37,11 +50,10 @@ export const apiCall = async (
 
     if (!response.ok) {
       if (response.status === 401) {
-        // Token expired or invalid, redirect to login
+        // Token expired or invalid - throw custom error to be handled by components
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
-        window.location.href = '/';
-        throw new Error('Session expired. Please login again.');
+        throw new SessionExpiredError('Session expired. Please login again.');
       }
       
       if (response.status === 403) {
@@ -123,8 +135,7 @@ export const downloadFile = async (
       if (response.status === 401) {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
-        window.location.href = '/';
-        throw new Error('Session expired. Please login again.');
+        throw new SessionExpiredError('Session expired. Please login again.');
       }
       if (response.status === 403) {
         throw new Error('Access forbidden. Please check your permissions or try logging in again.');

@@ -13,7 +13,8 @@ import {
   Search,
   Folder,
 } from "lucide-react";
-import { apiCall } from "@/app/utils/api";
+import { apiCall, SessionExpiredError } from "@/app/utils/api";
+import { useSession } from "@/app/context/SessionContext";
 
 interface PolicyRecord {
   id?: string;
@@ -42,6 +43,7 @@ interface PolicyRecord {
 export default function ViewRecords() {
   const router = useRouter();
   const pathname = usePathname() || '';
+  const { handleSessionExpiry } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -114,10 +116,15 @@ export default function ViewRecords() {
         setAllRecords(mappedRecords);
         setRecords(mappedRecords);
       } catch (err) {
-        console.error("Error fetching all records:", err);
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch records"
-        );
+        if (err instanceof SessionExpiredError) {
+          console.log('Session expired, redirecting to login...');
+          handleSessionExpiry();
+        } else {
+          console.error("Error fetching all records:", err);
+          setError(
+            err instanceof Error ? err.message : "Failed to fetch records"
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -199,10 +206,15 @@ export default function ViewRecords() {
       setRecords(mappedRecords);
       setCurrentPage(1);
     } catch (err) {
-      console.error("Search error:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to search policies",
-      );
+      if (err instanceof SessionExpiredError) {
+        console.log('Session expired, redirecting to login...');
+        handleSessionExpiry();
+      } else {
+        console.error("Search error:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to search policies",
+        );
+      }
       // Fall back to local filtering if API fails
       let filtered = allRecords;
 
@@ -281,10 +293,15 @@ export default function ViewRecords() {
       setRecords(mappedRecords);
       setCurrentPage(1);
     } catch (err) {
-      console.error("Error fetching all records:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch records"
-      );
+      if (err instanceof SessionExpiredError) {
+        console.log('Session expired, redirecting to login...');
+        handleSessionExpiry();
+      } else {
+        console.error("Error fetching all records:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch records"
+        );
+      }
     } finally {
       setLoading(false);
     }

@@ -3,13 +3,16 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { apiCall } from '@/app/utils/api';
-import { Home, FileText, BarChart3, Calendar, Settings, LogOut, Menu, ChevronDown, Trash2, Plus } from 'lucide-react';
+import { apiCall, SessionExpiredError } from '@/app/utils/api';
+import { useSession } from '@/app/context/SessionContext';
+import { Home, FileText, BarChart3, Calendar, Settings, LogOut, Menu, ChevronDown, Trash2, Plus, Download } from 'lucide-react';
+import styles from './page.module.css';
 
 export default function UploadDocsPage() {
   const router = useRouter();
   const params = useParams();
   const policyNo = params?.policyNo ? String(params.policyNo) : '';
+  const { handleSessionExpiry } = useSession();
 
   const [policy, setPolicy] = useState<any>(null);
   const [docs, setDocs] = useState<any[]>([]);
@@ -68,23 +71,40 @@ export default function UploadDocsPage() {
             setPolicy(null);
           }
         } catch (err) {
-          console.warn('Policy fetch failed:', err);
-          setPolicy(null);
+          if (err instanceof SessionExpiredError) {
+            console.log('Session expired, redirecting to login...');
+            handleSessionExpiry();
+          } else {
+            console.warn('Policy fetch failed:', err);
+            setPolicy(null);
+          }
         }
 
-        // documents endpoint not implemented on backend; keep docs empty or adapt if available
+        // Fetch documents from the list-artifacts endpoint
         try {
-          const d = await apiCall(`/api/v1/policy/${policyNo}/documents`, { method: 'GET' });
+          const timestamp = new Date().getTime(); // Add timestamp to prevent caching
+          const d = await apiCall(`/api/v1/policy/${policyNo}/list-artifacts?page=0&size=100&t=${timestamp}`, { method: 'GET' });
           console.debug('documents response:', d);
+          console.debug('First document details:', d && (Array.isArray(d) ? d[0] : d.content?.[0]));
           if (Array.isArray(d)) setDocs(d);
           else if (d && Array.isArray(d.content)) setDocs(d.content);
         } catch (e) {
           // ignore, leave docs empty
-          console.warn('Documents fetch failed:', e);
-          setDocs([]);
+          if (e instanceof SessionExpiredError) {
+            console.log('Session expired, redirecting to login...');
+            handleSessionExpiry();
+          } else {
+            console.warn('Documents fetch failed:', e);
+            setDocs([]);
+          }
         }
       } catch (err: any) {
-        setError(err?.message || 'Failed to load');
+        if (err instanceof SessionExpiredError) {
+          console.log('Session expired, redirecting to login...');
+          handleSessionExpiry();
+        } else {
+          setError(err?.message || 'Failed to load');
+        }
       } finally {
         setLoading(false);
       }
@@ -99,6 +119,31 @@ export default function UploadDocsPage() {
 
   const handleSidebarNav = (path: string) => router.push(path);
   const handleBack = () => router.push('/dashboard/view-records');
+
+  // Fetch documents fresh from API every time
+  const fetchDocuments = async () => {
+    try {
+      const timestamp = new Date().getTime(); // Add timestamp to prevent caching
+      const d = await apiCall(`/api/v1/policy/${policyNo}/list-artifacts?page=0&size=100&t=${timestamp}`, { method: 'GET' });
+      console.debug('Fetched documents from API:', d);
+      console.debug('First document structure:', d && (Array.isArray(d) ? d[0] : d.content?.[0]));
+      if (Array.isArray(d)) {
+        setDocs(d);
+      } else if (d && Array.isArray(d.content)) {
+        setDocs(d.content);
+      } else {
+        setDocs([]);
+      }
+    } catch (e) {
+      if (e instanceof SessionExpiredError) {
+        console.log('Session expired, redirecting to login...');
+        handleSessionExpiry();
+      } else {
+        console.warn('Failed to fetch documents:', e);
+        setDocs([]);
+      }
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -124,23 +169,21 @@ export default function UploadDocsPage() {
     setUploadSuccess('');
 
     try {
-      const formData = new FormData();
-      
-      // Add all selected files to formData
-      selectedFiles.forEach((file, index) => {
-        formData.append('files', file);
-      });
+      // Upload each file individually
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        const formData = new FormData();
+        formData.append('file', file);
 
-      // Add policyNo to the request
-      formData.append('policyNo', policyNo);
+        // Make the POST request with policyNumber in the URL path
+        const response = await apiCall(`/api/v1/policy/${policyNo}/upload-artifacts`, {
+          method: 'POST',
+          body: formData,
+        });
 
-      // Make the POST request
-      const response = await apiCall('/api/v1/policy/upload-artifacts', {
-        method: 'POST',
-        body: formData,
-      });
+        console.log(`Upload response for ${file.name}:`, response);
+      }
 
-      console.log('Upload response:', response);
       setUploadSuccess('Files uploaded successfully!');
       
       // Clear selected files
@@ -149,20 +192,19 @@ export default function UploadDocsPage() {
         fileInputRef.current.value = '';
       }
 
-      // Optionally refresh the documents list
-      try {
-        const d = await apiCall(`/api/v1/policy/${policyNo}/documents`, { method: 'GET' });
-        if (Array.isArray(d)) setDocs(d);
-        else if (d && Array.isArray(d.content)) setDocs(d.content);
-      } catch (e) {
-        console.warn('Failed to refresh documents:', e);
-      }
+      // Fetch fresh documents from API after upload
+      await fetchDocuments();
 
       // Clear success message after 3 seconds
       setTimeout(() => setUploadSuccess(''), 3000);
     } catch (err: any) {
-      console.error('Upload error:', err);
-      setUploadError(err?.message || 'Failed to upload files');
+      if (err instanceof SessionExpiredError) {
+        console.log('Session expired, redirecting to login...');
+        handleSessionExpiry();
+      } else {
+        console.error('Upload error:', err);
+        setUploadError(err?.message || 'Failed to upload files');
+      }
     } finally {
       setUploading(false);
     }
@@ -172,10 +214,43 @@ export default function UploadDocsPage() {
     setSelectedFiles(files => files.filter((_, i) => i !== idx));
   };
 
+  const handleDownloadDocument = async (artifactId: string | number, fileName: string) => {
+    try {
+      console.log('Downloading document:', { artifactId, fileName, policyNo });
+      const response = await fetch(`http://localhost:8081/api/v1/policy/${policyNo}/download-artifacts/${artifactId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+
+      console.log('Download response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Download error response:', errorText);
+        throw new Error(`Download failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName || 'document';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Download error:', err);
+      alert('Failed to download document: ' + (err?.message || 'Unknown error'));
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className={styles.root}>
       {/* Sidebar */}
-      <div className={`bg-slate-700 text-white transition-all duration-300 ${sidebarOpen ? 'w-56' : 'w-20'} flex flex-col`}>
+      <div className={`${styles.sidebar} ${sidebarOpen ? 'w-56' : 'w-20'}`}>
         <div className="flex items-center gap-3 p-4 border-b border-slate-600">
           <div className="bg-blue-500 p-2 rounded">
             <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -206,9 +281,9 @@ export default function UploadDocsPage() {
         </button>
       </div>
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={styles.main}>
         {/* Top Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div className={styles.header}>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-gray-600 hover:text-gray-900"><Menu size={24} /></button>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 px-3 py-2 rounded">
@@ -219,12 +294,12 @@ export default function UploadDocsPage() {
           </div>
         </div>
         {/* Page Content */}
-        <div className="flex-1 overflow-auto p-6 bg-blue-50">
+        <div className={`${styles.pageContent} bg-blue-50`}>
           <div className="max-w-4xl mx-auto">
             <div className="mb-6">
               <button onClick={handleBack} className="px-3 py-1 rounded bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100">Back</button>
             </div>
-            <div className="bg-white rounded-lg shadow p-6 mb-6 text-black">
+            <div className={styles.card}>
               <h1 className="text-2xl font-bold mb-4">Upload Documents for Policy <span className="text-blue-700">#{policyNo}</span></h1>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                 <div><span className="font-semibold text-gray-700">Policy No:</span> {policy?.policyNumber ?? policyNo}</div>
@@ -235,10 +310,10 @@ export default function UploadDocsPage() {
                 <div><span className="font-semibold text-gray-700">Policy Type:</span> {(policy?.product || policy?.policyType || policy?.policy_type || 'N/A')}</div>
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6 mb-6 text-black">
+            <div className={styles.card}>
               <h2 className="text-lg font-semibold mb-4">Upload Documents</h2>
               <div
-                className="border-2 border-dashed border-blue-400 rounded-lg p-8 flex flex-col items-center justify-center bg-blue-50 cursor-pointer hover:bg-blue-100 transition"
+                className={styles.dropzone}
                 onDrop={handleDrop}
                 onDragOver={e => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
@@ -261,9 +336,9 @@ export default function UploadDocsPage() {
               </div>
               {/* Selected files preview */}
               {selectedFiles.length > 0 && (
-                <div className="mt-4 border rounded-lg bg-gray-50">
+                <div className={styles.selectedFiles}>
                   {selectedFiles.map((file, idx) => (
-                    <div key={idx} className="flex items-center justify-between px-4 py-2 border-b last:border-b-0">
+                    <div key={idx} className={styles.fileRow}>
                       <div className="flex items-center gap-2">
                         <FileText size={18} className="text-blue-500" />
                         <span className="font-medium">{file.name}</span>
@@ -284,14 +359,14 @@ export default function UploadDocsPage() {
                   {uploadSuccess}
                 </div>
               )}
-              <div className="flex justify-end gap-2 mt-4">
+              <div className={styles.uploadButtons}>
                 <button onClick={() => setSelectedFiles([])} disabled={uploading} className="px-4 py-2 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed">Cancel</button>
                 <button onClick={handleUpload} disabled={uploading || selectedFiles.length === 0} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed">
                   {uploading ? 'Uploading...' : 'Upload Files'}
                 </button>
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6 text-black">
+            <div className={styles.docsCard}>
               <h3 className="font-semibold mb-4">Existing Documents</h3>
               {loading ? (
                 <p>Loading...</p>
@@ -322,7 +397,7 @@ export default function UploadDocsPage() {
                             <td className="px-4 py-2">{d.size ? `${(d.size / (1024 * 1024)).toFixed(2)} MB` : ''}</td>
                             <td className="px-4 py-2">{d.uploadedAt ? new Date(d.uploadedAt).toLocaleString() : ''}</td>
                             <td className="px-4 py-2 flex gap-2">
-                              <a href={d.url || '#'} target="_blank" rel="noreferrer" className="text-blue-600"><Plus size={18} /></a>
+                              <button onClick={() => handleDownloadDocument(d.id, d.fileName || d.name || 'document')} className="text-blue-600 hover:text-blue-800" title="Download"><Download size={18} /></button>
                               <button className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
                             </td>
                           </tr>

@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, LogOut, Home, FileText, BarChart3, Calendar, Settings, Search, ChevronDown } from 'lucide-react';
-import { apiCall } from '@/app/utils/api';
+import { apiCall, SessionExpiredError } from '@/app/utils/api';
 import { usePathname } from 'next/navigation';
+import { useSession } from '@/app/context/SessionContext';
 
 interface User {
   username: string;
@@ -14,6 +15,7 @@ interface User {
 export default function Dashboard() {
   const router = useRouter();
   const pathname = usePathname() || '';
+  const { handleSessionExpiry } = useSession();
   const [user, setUser] = useState<User | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -54,7 +56,12 @@ export default function Dashboard() {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch statistics:', error);
+      if (error instanceof SessionExpiredError) {
+        console.log('Session expired, redirecting to login...');
+        handleSessionExpiry();
+      } else {
+        console.error('Failed to fetch statistics:', error);
+      }
     } finally {
       setStatsLoading(false);
     }
